@@ -1,0 +1,114 @@
+{
+  "authors": [
+    {
+      "family-names": "Vaswani",
+      "given-names": "Ashish"
+    },
+    {
+      "family-names": "Shazeer",
+      "given-names": "Noam"
+    },
+    {
+      "family-names": "Parmar",
+      "given-names": "Niki"
+    },
+    {
+      "family-names": "Uszkoreit",
+      "given-names": "Jakob"
+    },
+    {
+      "family-names": "Jones",
+      "given-names": "Llion"
+    },
+    {
+      "family-names": "Gomez",
+      "given-names": "Aidan N"
+    },
+    {
+      "family-names": "Kaiser",
+      "given-names": "\u0141ukasz"
+    },
+    {
+      "family-names": "Polosukhin",
+      "given-names": "Illia"
+    }
+  ],
+  "cff-version": "1.2.0",
+  "message": "If you use this software, please cite it using the metadata from this file.",
+  "title": "Attention is All you Need",
+  "preferred-citation": {
+    "authors": [
+      {
+        "family-names": "Vaswani",
+        "given-names": "Ashish"
+      },
+      {
+        "family-names": "Shazeer",
+        "given-names": "Noam"
+      },
+      {
+        "family-names": "Parmar",
+        "given-names": "Niki"
+      },
+      {
+        "family-names": "Uszkoreit",
+        "given-names": "Jakob"
+      },
+      {
+        "family-names": "Jones",
+        "given-names": "Llion"
+      },
+      {
+        "family-names": "Gomez",
+        "given-names": "Aidan N"
+      },
+      {
+        "family-names": "Kaiser",
+        "given-names": "\u0141ukasz"
+      },
+      {
+        "family-names": "Polosukhin",
+        "given-names": "Illia"
+      }
+    ],
+    "editors": [
+      {
+        "family-names": "Guyon",
+        "given-names": "I."
+      },
+      {
+        "family-names": "Von Luxburg",
+        "given-names": "U."
+      },
+      {
+        "family-names": "Bengio",
+        "given-names": "S."
+      },
+      {
+        "family-names": "Wallach",
+        "given-names": "H."
+      },
+      {
+        "family-names": "Fergus",
+        "given-names": "R."
+      },
+      {
+        "family-names": "Vishwanathan",
+        "given-names": "S."
+      },
+      {
+        "family-names": "Garnett",
+        "given-names": "R."
+      }
+    ],
+    "publisher": {
+      "name": "Curran Associates, Inc."
+    },
+    "title": "Attention is All you Need",
+    "type": "conference-paper",
+    "journal": "Advances in Neural Information Processing Systems",
+    "url": "https://proceedings.neurips.cc/paper_files/paper/2017/file/3f5ee243547dee91fbd053c1c4a845aa-Paper.pdf",
+    "volume": 30,
+    "year": 2017
+  }
+}

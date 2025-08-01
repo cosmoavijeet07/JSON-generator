@@ -1,0 +1,289 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "basics": {
+    "name": "Avijeet Palit",
+    "email": "avijeet.palit07@gmail.com",
+    "phone": "+91-8789647995",
+    "summary": "Recent graduate in Data Science from IIT Madras and a Master\u2019s in Physics, specializing in data-driven strategy and AI-enabled solutions. Experienced in developing GenAI tools, managing stakeholders, and delivering business impact through analytics and strategic projects. Strong foundation in AI, ML, data backed solution across industry and academia.",
+    "profiles": [
+      {
+        "network": "LinkedIn"
+      },
+      {
+        "network": "Github"
+      }
+    ]
+  },
+  "education": [
+    {
+      "institution": "Indian Institute of Technology - Madras",
+      "area": "Data Science and Applications",
+      "studyType": "Bachelors",
+      "startDate": "2021-01",
+      "endDate": "2025-04",
+      "score": "8.2",
+      "courses": [
+        "Minor in Economics & Finance"
+      ]
+    },
+    {
+      "institution": "T N B College",
+      "area": "Physics",
+      "studyType": "Masters",
+      "startDate": "2021-12",
+      "endDate": "2023-12",
+      "score": "8.0"
+    },
+    {
+      "institution": "T N B College",
+      "area": "Physics",
+      "studyType": "Bachelors",
+      "startDate": "2018-07",
+      "endDate": "2021-09",
+      "score": "78%"
+    }
+  ],
+  "skills": [
+    {
+      "name": "Programming Languages",
+      "keywords": [
+        "Python",
+        "Java",
+        "Julia",
+        "JavaScript",
+        "SQL",
+        "NoSQL",
+        "HTML",
+        "CSS"
+      ]
+    },
+    {
+      "name": "ML & Data Science",
+      "keywords": [
+        "PyTorch",
+        "Scikit-Learn",
+        "TensorFlow",
+        "Hugging Face",
+        "Numpy",
+        "Pandas",
+        "SPSS",
+        "Power BI",
+        "Looker Studio"
+      ]
+    },
+    {
+      "name": "Development & Frameworks",
+      "keywords": [
+        "Flask",
+        "Django",
+        "React.js",
+        "Vue.js",
+        "Node.js",
+        "Apache Kafka",
+        "PySpark",
+        "Snowflake",
+        "BigQuery"
+      ]
+    },
+    {
+      "name": "Cloud & DevOps",
+      "keywords": [
+        "Git",
+        "GitHub",
+        "Docker",
+        "Kubernetes",
+        "GCP",
+        "AWS"
+      ]
+    },
+    {
+      "name": "Management",
+      "keywords": [
+        "Jira",
+        "Microsoft 360",
+        "Google One"
+      ]
+    },
+    {
+      "name": "Soft Skills",
+      "keywords": [
+        "Data Storytelling",
+        "Leadership",
+        "Stakeholder Management",
+        "Technical Writing"
+      ]
+    }
+  ],
+  "work": [
+    {
+      "name": "PrecIQ LLC",
+      "location": "Remote | Texas, USA",
+      "position": "Product Owner & Business Analyst",
+      "startDate": "2024-04",
+      "endDate": "2024-10",
+      "summary": "Formulated key USPs and app features, researched on spikes, and collaborated on RAG model for automated code documentation, leading to 40% improved developer efficiency and streamlined workflows. Managed cross-functional teams across 4 time zones, implemented Agile workflows via Azure DevOps, and reduced sprint delivery time by 25%. Led market research, formulated strategic market entry framework targeting 5 B2B SaaS verticals, driving product adoption, scalability, and business growth.",
+      "highlights": [
+        "Formulated key USPs and app features, researched on spikes, and collaborated on RAG model for automated code documentation, leading to 40% improved developer efficiency and streamlined workflows",
+        "Managed cross-functional teams across 4 time zones, implemented Agile workflows via Azure DevOps, and reduced sprint delivery time by 25%",
+        "Led market research, formulated strategic market entry framework targeting 5 B2B SaaS verticals, driving product adoption, scalability, and business growth"
+      ]
+    },
+    {
+      "name": "Indian Institute of Technology, Ropar",
+      "location": "Ropar, Punjab",
+      "position": "Teaching Assistant \u2013 Minor in AI",
+      "startDate": "2025-01",
+      "summary": "Designed materials and led sessions for 900+ students, improving course engagement by 25% through interactive practical and project based sessions.",
+      "highlights": [
+        "Designed materials and led sessions for 900+ students, improving course engagement by 25% through interactive practical and project based sessions"
+      ]
+    },
+    {
+      "name": "Indian Institute of Technology, Madras",
+      "location": "Chennai, Tamil Nadu",
+      "position": "Project Mentor \u2013 Business Data Management",
+      "startDate": "2024-10",
+      "endDate": "2025-06",
+      "summary": "Mentored 50+ students in solving business challenges across diverse industries, from small ventures (food carts, nurseries, retail) to large-scale operations (coal, mining, energy, global trade), by structuring problem statements, developing analytical approaches, and refining consulting strategies for data-backed decision-making and effective stakeholder communication.",
+      "highlights": [
+        "Mentored 50+ students in solving business challenges across diverse industries, from small ventures (food carts, nurseries, retail) to large-scale operations (coal, mining, energy, global trade), by structuring problem statements, developing analytical approaches, and refining consulting strategies for data-backed decision-making and effective stakeholder communication"
+      ]
+    },
+    {
+      "name": "Freelance",
+      "location": "Remote",
+      "position": "Web Development, Data Analysis & Digital(PPC) Marketing",
+      "startDate": "2020-07",
+      "endDate": "2025-05",
+      "summary": "Delivered 40+ Major projects for global clients across web development, data analytics, and Digital marketing(PPC); boosted average site traffic by 5x, optimized ad performance with 30\u201340% lower CPC, and enhanced digital ROI through predictive analytics.",
+      "highlights": [
+        "Delivered 40+ Major projects for global clients across web development, data analytics, and Digital marketing(PPC); boosted average site traffic by 5x, optimized ad performance with 30\u201340% lower CPC, and enhanced digital ROI through predictive analytics"
+      ]
+    }
+  ],
+  "projects": [
+    {
+      "name": "Kaggle Contests",
+      "entity": "IIT Madras",
+      "startDate": "2023-05",
+      "endDate": "2025-03",
+      "highlights": [
+        "Fine Tuned high-accuracy AI models, achieving 99% accuracy score in deepfake audio detection (16 languages) using SpeechBrain, wav2vec, and 94% accuracy score in Text sentiment classification (13 languages) using LLaMA 3.1-8B. Optimized real-time object tracking with Yolo & UNET architecture.",
+        "Refined ML models (XGBoost, Logistic Regression, Random Forest) using 7 preprocessing strategies, achieving 83.5% F1 in Kaggle via EDA, hyperparameter tuning, pipelines, and NLP."
+      ]
+    },
+    {
+      "name": "Smart Seek Portal - A Gen AI Supported LMS",
+      "entity": "IIT Madras",
+      "startDate": "2024-05",
+      "endDate": "2024-09",
+      "highlights": [
+        "Developed Smart SEEK Portal, an AI-driven learning platform with Gemini Pro, automated feedback, real-time analytics, and scalable architecture, improving content delivery efficiency by 35%, and cutting faculty review time by 50%."
+      ]
+    },
+    {
+      "name": "Crisis Management in a Textile Enterprise",
+      "entity": "IIT Madras",
+      "startDate": "2023-09",
+      "endDate": "2023-12",
+      "highlights": [
+        "Ranked #1 among the top 10 projects out of 1,500+ BDM Projects at the CODE HR Summit 2024, IIT Madras, and featured in the book Capstone Chronicles by IIT Madras.",
+        "Achieved 10-fold revenue growth ( Rs 12+ lakhs in Nov. 2023, Rs 50+ lakhs in Dec. 2023) while improving operational efficiency, led strategic debt restructuring, implemented robust inventory systems, and mitigated Rs 20+ lakhs in miscalculated sundry credits, strengthening inventory integrity and crisis management."
+      ]
+    },
+    {
+      "name": "0\u03bd\u03b2\u03b2 Decay: Current Progress and Future Prospects (MSc Thesis)",
+      "entity": "TNB College",
+      "startDate": "2023-03",
+      "endDate": "2023-12",
+      "highlights": [
+        "Conducted an in-depth theoretical study on 0\u03bd\u03b2\u03b2 decay, analyzing implications for Majorana neutrino mass and lepton number violation; synthesized findings across 30+ peer-reviewed sources, contributing to understanding of neutrino physics in astrophysics and cosmology"
+      ]
+    },
+    {
+      "name": "Atmospheric Model Fitting: Exo-Planet WASP-39b",
+      "entity": "NExSI, Cal-tech",
+      "startDate": "2023-07",
+      "endDate": "2023-07",
+      "highlights": [
+        "Led WASP-39b atmosphere characterization project using JWST data pipelines and retrieval techniques, reproduced spectra analysis from NIRCam, NIRISS, and NIRSpec instruments, leveraging Picaso library"
+      ]
+    },
+    {
+      "name": "OptiClaim - A MultiModal AI enabled BPO/BPM System",
+      "startDate": "2024-12",
+      "endDate": "2025-03",
+      "highlights": [
+        "Developed a Multimodal Human-AI triage system for BPO/BPM sector, integrating automation, sentiment based prioritization, and omni-channel experience for efficient, aiming to reduce first-response time by 60% and improve resolution accuracy with empathetic oversight."
+      ]
+    },
+    {
+      "name": "Gen AI\u2019s Impact on Teams, Ethics, Conflict & Business Decisions",
+      "entity": "IIT Madras",
+      "startDate": "2024-05",
+      "endDate": "2024-09",
+      "highlights": [
+        "Investigated GenAI\u2019s influence on team dynamics, ethics, and business decisions in engineering space using surveys, 5 expert interviews, 10 academic papers, TED talks, and 3 industry case studies."
+      ]
+    },
+    {
+      "name": "NASA Sagan Summer School",
+      "entity": "NASA Exoplanetary Science Institute, Cal-tech",
+      "startDate": "2023-07",
+      "highlights": [
+        "Explored Exoplanet Atmosphere Characterization and JWST data analysis, contributing as a Hands-on Helper in 5 micro projects/assignments for data reduction (Eureka!, Excalibur) and atmospheric modeling (PICASO, petitRADTRANS)."
+      ]
+    }
+  ],
+  "volunteer": [
+    {
+      "organization": "Student Placement Council, IIT Madras B.S. Degree",
+      "position": "Secretary",
+      "startDate": "2024-02",
+      "endDate": "2025-01",
+      "summary": "Represented 30,000+ students and managing a 50+ member team to enhance industry outreach, streamline placement operations, and improved student readiness through structured workflows, SOPs, a 500+ page career guide and key initiatives like Placy (placement chatbot) & Placify (AI resume scorer). Strengthened corporate engagement, securing job opportunities, leading 15+ marketing campaigns, and organizing major placement events like the CODE HR Summit 2024, industry sessions, and career workshops to foster employer-student connections.",
+      "highlights": [
+        "Represented 30,000+ students and managing a 50+ member team to enhance industry outreach, streamline placement operations, and improved student readiness through structured workflows, SOPs, a 500+ page career guide and key initiatives like Placy (placement chatbot) & Placify (AI resume scorer).",
+        "Strengthened corporate engagement, securing job opportunities, leading 15+ marketing campaigns, and organizing major placement events like the CODE HR Summit 2024, industry sessions, and career workshops to foster employer-student connections."
+      ]
+    },
+    {
+      "organization": "Ramanujan Society of Research, IIT Madras B.S. Degree",
+      "position": "Coordinator - Scholars\u2019 Department",
+      "startDate": "2023-04",
+      "endDate": "2024-08"
+    },
+    {
+      "organization": "Raahat - Mental Health & Wellness Society, IIT Madras B.S. Degree",
+      "position": "Co-founder & Administrative Head",
+      "startDate": "2023-01",
+      "endDate": "2024-03"
+    },
+    {
+      "organization": "Upper House Council, IIT Madras B.S. Degree",
+      "position": "Group Leader & Student Constitution Drafting Committee Member",
+      "startDate": "2022-09",
+      "endDate": "2023-08"
+    },
+    {
+      "organization": "Paradox - Annual Fest, IIT Madras B.S. Degree",
+      "position": "Event Lead, Professional & Sponsorship Committee Member",
+      "startDate": "2022-07",
+      "endDate": "2023-05"
+    }
+  ],
+  "awards": [
+    {
+      "title": "National Finalist, Techathon 5.0, Ernst & Young India",
+      "date": "2025-03",
+      "awarder": "Ernst & Young India",
+      "summary": "Developed a Multimodal Human-AI triage system for BPO/BPM sector, integrating automation, sentiment based prioritization, and omni-channel experience for efficient, aiming to reduce first-response time by 60% and improve resolution accuracy with empathetic oversight."
+    },
+    {
+      "title": "CODE HR Summit 2024 Top Project",
+      "date": "2024",
+      "awarder": "IIT Madras",
+      "summary": "Ranked #1 among the top 10 projects out of 1,500+ BDM Projects at the CODE HR Summit 2024, IIT Madras, and featured in the book Capstone Chronicles by IIT Madras."
+    }
+  ]
+}

@@ -1,0 +1,135 @@
+﻿AVIJEET PALIT
++91-8789647995 | avijeet.palit07@gmail.com | LinkedIn | Github
+
+SUMMARY
+
+Recent graduate in Data Science from IIT Madras and a Master’s in Physics, specializing in data-driven strategy and
+AI-enabled solutions. Experienced in developing GenAI tools, managing stakeholders, and delivering business impact
+through analytics and strategic projects. Strong foundation in AI, ML, data backed solution across industry and academia.
+
+EDUCATION
+Indian Institute of Technology - Madras Chennai, Tamil Nadu
+Bachelors in Data Science and Applications with Minor in Economics & Finance - 8.2 CGPA Jan. 2021 – Apr. 2025
+T N B College Bhagalpur, Bihar
+Masters in Physics - 8.0 CGPA Dec. 2021 – Dec 2023
+T N B College Bhagalpur, Bihar
+Bachelors in Physics - 78% July. 2018 – Sept 2021
+
+SKILLS & TOOLS
+Languages: Python, Java, Julia, JavaScript, SQL, NoSQL, HTML/CSS
+ML & Data Science: PyTorch, Scikit-Learn, TensorFlow, Hugging Face, Numpy, Pandas, SPSS, Power BI, Looker Studio
+Development & Frameworks: Flask, Django, React.js, Vue.js, Node.js, Apache Kafka, PySpark, Snowflake, BigQuery
+Cloud & DevOps: Git/GitHub, Docker, Kubernetes, GCP, AWS
+Management: Jira, Microsoft 360, Google One
+Soft Skills: Data Storytelling, Leadership, Stakeholder Management, Technical Writing
+
+EXPERIENCE
+Product Owner & Business Analyst Apr 2024 – Oct 2024
+PrecIQ LLC Remote | Texas, USA
+
+• Formulated key USPs and app features, researched on spikes, and collaborated on RAG model for automated code
+documentation, leading to 40% improved developer efficiency and streamlined workflows
+
+• Managed cross-functional teams across 4 time zones, implemented Agile workflows via Azure DevOps, and reduced sprint
+delivery time by 25%.
+
+• Led market research, formulated strategic market entry framework targeting 5 B2B SaaS verticals, driving product adoption,
+scalability, and business growth.
+
+Teaching Assistant – Minor in AI Jan. 2025 – Present
+Indian Institute of Technology, Ropar Ropar, Punjab
+
+• Designed materials and led sessions for 900+ students, improving course engagement by 25% through interactive practical
+and project based sessions.
+
+Project Mentor – Business Data Management Oct. 2024 – June, 2025
+Indian Institute of Technology, Madras Chennai, Tamil Nadu
+
+• Mentored 50+ students in solving business challenges across diverse industries, from small ventures (food carts, nurseries,
+retail) to large-scale operations (coal, mining, energy, global trade), by structuring problem statements, developing analytical
+approaches, and refining consulting strategies for data-backed decision-making and effective stakeholder communication
+
+Freelance Jul 2020 – May 2025
+Web Development, Data Analysis & Digital(PPC) Marketing Remote
+
+• Delivered 40+ Major projects for global clients across web development, data analytics, and Digital marketing(PPC); boosted
+average site traffic by 5x, optimized ad performance with 30–40% lower CPC, and enhanced digital ROI through predictive
+analytics.
+
+
+
+PROJECTS
+
+Kaggle Contests | IIT Madras May 2023 – Mar 2025
+• Fine Tuned high-accuracy AI models, achieving 99% accuracy score in deepfake audio detection (16 languages) using
+
+SpeechBrain, wav2vec, and 94% accuracy score in Text sentiment classification (13 languages) using LLaMA 3.1-8B.
+Optimized real-time object tracking with Yolo & UNET architecture.
+
+• Refined ML models (XGBoost, Logistic Regression, Random Forest) using 7 preprocessing strategies, achieving 83.5% F1 in
+Kaggle via EDA, hyperparameter tuning, pipelines, and NLP.
+
+Smart Seek Portal - A Gen AI Supported LMS | IIT Madras May 2024 – Sep 2024
+• Developed Smart SEEK Portal, an AI-driven learning platform with Gemini Pro, automated feedback, real-time analytics, and
+
+scalable architecture, improving content delivery efficiency by 35%, and cutting faculty review time by 50%.
+Crisis Management in a Textile Enterprise | IIT Madras Sep 2023 – Dec 2023
+
+• Ranked #1 among the top 10 projects out of 1,500+ BDM Projects at the CODE HR Summit 2024, IIT Madras, and featured in
+the book Capstone Chronicles by IIT Madras.
+
+• Achieved 10-fold revenue growth ( Rs 12+ lakhs in Nov. 2023, Rs 50+ lakhs in Dec. 2023) while improving operational
+efficiency, led strategic debt restructuring, implemented robust inventory systems, and mitigated Rs 20+ lakhs in
+miscalculated sundry credits, strengthening inventory integrity and crisis management.
+
+0νββ Decay: Current Progress and Future Prospects (MSc Thesis) | TNB College Mar 2023 – Dec 2023
+• Conducted an in-depth theoretical study on 0νββ decay, analyzing implications for Majorana neutrino mass and lepton
+
+number violation; synthesized findings across 30+ peer-reviewed sources, contributing to understanding of neutrino physics
+in astrophysics and cosmology
+
+Atmospheric Model Fitting: Exo-Planet WASP-39b | NExSI, Cal-tech Jul 2023 – Jul 2023
+• Led WASP-39b atmosphere characterization project using JWST data pipelines and retrieval techniques, reproduced spectra
+
+analysis from NIRCam, NIRISS, and NIRSpec instruments, leveraging Picaso library
+
+POSITIONS OF RESPONSIBILITY
+Secretary Feb 2024 – Jan 2025
+Student Placement Council, IIT Madras B.S. Degree
+
+• Represented 30,000+ students and managing a 50+ member team to enhance industry outreach, streamline placement
+operations, and improved student readiness through structured workflows, SOPs, a 500+ page career guide and key initiatives
+like Placy (placement chatbot) & Placify (AI resume scorer).
+
+• Strengthened corporate engagement, securing job opportunities, leading 15+ marketing campaigns, and organizing major
+placement events like the CODE HR Summit 2024, industry sessions, and career workshops to foster employer-student
+connections.
+
+Coordinator - Scholars’ Department Apr 2023 – Aug 2024
+Ramanujan Society of Research, IIT Madras B.S. Degree
+Co-founder & Administrative Head Jan 2023 – Mar 2024
+Raahat - Mental Health & Wellness Society, IIT Madras B.S. Degree
+Group Leader & Student Constitution Drafting Committee Member Sep 2022 – Aug 2023
+Upper House Council, IIT Madras B.S. Degree
+Event Lead, Professional & Sponsorship Committee Member Jul 2022 – May 2023
+Paradox - Annual Fest, IIT Madras B.S. Degree
+
+EXTRA-CURRICULAR ACTIVITIES
+OptiClaim - A MultiModal AI enabled BPO/BPM System Dec 2024 – Mar 2025
+National Finalist, Techathon 5.0, Ernst & Young India
+
+• Developed a Multimodal Human-AI triage system for BPO/BPM sector, integrating automation, sentiment based
+prioritization, and omni-channel experience for efficient, aiming to reduce first-response time by 60% and improve resolution
+accuracy with empathetic oversight.
+
+Gen AI’s Impact on Teams, Ethics, Conflict & Business Decisions May 2024 – Sep 2024
+IIT Madras Chennai, Tamilnadu
+
+• Investigated GenAI’s influence on team dynamics, ethics, and business decisions in engineering space using surveys, 5 expert
+interviews, 10 academic papers, TED talks, and 3 industry case studies.
+
+NASA Sagan Summer School July 2023
+NASA Exoplanetary Science Institute, Cal-tech Remote | California, USA
+
+• Explored Exoplanet Atmosphere Characterization and JWST data analysis, contributing as a Hands-on Helper in 5 micro
+projects/assignments for data reduction (Eureka!, Excalibur) and atmospheric modeling (PICASO, petitRADTRANS).

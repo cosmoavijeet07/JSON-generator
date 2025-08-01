@@ -3,3 +3,6 @@
 
 # Ignore Python virtual environment folder
 env/
+
+# Ignore logs
+logs/
