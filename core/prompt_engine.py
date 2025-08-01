@@ -1,3 +1,4 @@
+import json
 def create_prompt(schema: str, text: str, error: str = None):
     """
     Generates a detailed prompt with multi-shot learning, schema logic, error feedback, and nested JSON support.
