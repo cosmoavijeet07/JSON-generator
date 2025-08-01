@@ -104,7 +104,7 @@ if st.button("Generate JSON"):
                 st.success("✅ JSON generated successfully!")
 
 # Save to session_state if generation was successful
-if success:
+if generated_result:
     st.session_state["generated_result"] = generated_result
     st.session_state["session_id"] = session_id
 
