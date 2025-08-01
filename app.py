@@ -103,24 +103,34 @@ if st.button("Generate JSON"):
             else:
                 st.success("✅ JSON generated successfully!")
 
-# === 📤 Post-Generation Actions ===
-if generated_result:
+# Save to session_state if generation was successful
+if success:
+    st.session_state["generated_result"] = generated_result
+    st.session_state["session_id"] = session_id
+
+# === 📤 Post-Generation Display + Downloads ===
+if "generated_result" in st.session_state and st.session_state["generated_result"]:
     st.markdown("### 🎯 Extracted JSON")
-    st.json(generated_result)
+    st.json(st.session_state["generated_result"])
 
     st.download_button(
         "📥 Download JSON",
-        data=json.dumps(generated_result, indent=2),
-        file_name="output.json"
+        data=json.dumps(st.session_state["generated_result"], indent=2),
+        file_name="output.json",
+        key="download-json"
     )
 
-    if session_id:
-        st.download_button(
-            "📄 Download Logs",
-            data="\n".join(
-                open(f"logs/{session_id}/{f}", encoding="utf-8").read()
-                for f in os.listdir(f"logs/{session_id}")
-                if f.endswith(".log")
-            ),
-            file_name=f"{session_id}_session.log"
-        )
+if "session_id" in st.session_state and st.session_state["session_id"]:
+    sid = st.session_state["session_id"]
+    log_data = "\n".join(
+        open(f"logs/{sid}/{f}", encoding="utf-8").read()
+        for f in os.listdir(f"logs/{sid}")
+        if f.endswith(".log")
+    )
+
+    st.download_button(
+        "📄 Download Logs",
+        data=log_data,
+        file_name=f"{sid}_session.log",
+        key="download-logs"
+    )
