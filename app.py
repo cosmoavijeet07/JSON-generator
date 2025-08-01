@@ -36,7 +36,7 @@ st.markdown(
     f"""
 **Model Notes**  
 - 🧠 **GPT 4.1**: Recommended for well-structured small/medium schemas with fewer fields  
-- 🧩 **GPT O4 Mini**: Best for very large schemas, complex nesting, and long input contexts (up to 100k tokens)
+- 🧩 **GPT O4 Mini**: Best for very large schemas, complex nesting, and long output (up to 100k tokens)
 """
 )
 
