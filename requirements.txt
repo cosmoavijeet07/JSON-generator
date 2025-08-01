@@ -1,0 +1,7 @@
+streamlit
+openai
+jsonschema
+tiktoken
+python-dotenv
+pydantic
+rich
