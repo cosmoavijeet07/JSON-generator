@@ -6,7 +6,7 @@
 
 ## 🔗 App Access
 
-**Streamlit App**: [https://jason-extract-gen.streamlit.app/](https://jason-extract-gen.streamlit.app/)
+**Streamlit App**: [https://json-extract-gen.streamlit.app/](https://json-extract-gen.streamlit.app/)
 
 ---
 
@@ -144,7 +144,7 @@ Each module in the `core/` folder is fully commented and structured.
 | `logger_service.py` | Writes structured per-session logs to disk |
 
 ---
-🧾 View detailed documentation [doc](docdotcom).
+🧾 View detailed documentation [click here](https://docs.google.com/document/d/e/2PACX-1vR-vEbZA1sojVCf9MwVLlU0KaYF_In8wGCkgnSmUXlcDM7GSDSKnjx_3lQi99mMnx8RTdrg8O6LKEW3/pub).
 
 ## 👤 Author & Support
 
