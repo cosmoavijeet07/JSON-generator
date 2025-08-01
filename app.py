@@ -21,7 +21,7 @@ st.title("🧠 Structured JSON Extractor")
 # === 🔘 Model Selector ===
 model_map = {
     "GPT 4.1": "gpt-4.1-2025-04-14",
-    "GPT O4 Mini": "o4-mini-2025-04-16"
+    "GPT O3": "o3-2025-04-16"
 }
 
 selected_model_label = st.selectbox(
@@ -36,7 +36,7 @@ st.markdown(
     f"""
 **Model Notes**  
 - 🧠 **GPT 4.1**: Recommended for well-structured small/medium schemas with fewer fields  
-- 🧩 **GPT O4 Mini**: Best for very large schemas, complex nesting, and long output (up to 100k tokens)
+- 🧩 **GPT O3**: Best for very large schemas, complex nesting, and long output (up to 100k tokens)
 """
 )
 
