@@ -87,7 +87,7 @@ curl -X POST http://localhost:8000/extract-json/ \
 ---
 
 ## 🧱 Architecture Diagram
-
+![alt text](image.png)
 
 
 ---
@@ -131,7 +131,7 @@ JSON GENERATOR/
 
 ---
 
-## 📚 Detailed Code Documentation
+## 📚 CORE files
 
 Each module in the `core/` folder is fully commented and structured.
 
