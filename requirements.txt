@@ -1,7 +1,19 @@
-streamlit
+# LLM + Tokenizer
 openai
-jsonschema
 tiktoken
-python-dotenv
+
+# Schema validation
+jsonschema
 pydantic
+
+# Core functionality
+python-dotenv
 rich
+
+# Frontend (Streamlit UI)
+streamlit
+
+# FastAPI API Server
+fastapi
+uvicorn[standard]
+python-multipart
