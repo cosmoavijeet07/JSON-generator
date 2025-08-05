@@ -10,20 +10,29 @@ import importlib.util
 class TextPreprocessor:
     def __init__(self):
         model_name = "en_core_web_sm"
+
         if not self._is_spacy_model_installed(model_name):
-            import spacy.cli
-            print(f"⚠️ Auto-downloading spaCy model '{model_name}'...")
-            spacy.cli.download(model_name)
+            self._download_spacy_model(model_name)
 
         try:
             self.nlp = spacy.load(model_name)
         except Exception as e:
             raise RuntimeError(f"❌ Could not load spaCy model '{model_name}': {e}")
+
         self.sentence_model = SentenceTransformer('all-MiniLM-L6-v2')
-        
+
     def _is_spacy_model_installed(self, model_name: str) -> bool:
         """Check if spaCy model is installed."""
         return importlib.util.find_spec(model_name) is not None
+
+    def _download_spacy_model(self, model_name: str):
+        """Download spaCy model safely."""
+        import spacy.cli
+        try:
+            print(f"⚠️ SpaCy model '{model_name}' not found. Downloading...")
+            spacy.cli.download(model_name)
+        except Exception as e:
+            raise RuntimeError(f"❌ Failed to download spaCy model '{model_name}': {e}")
     
     def detect_document_structure(self, text: str) -> Dict:
         """Detect headers, sections, lists, tables in the document"""
