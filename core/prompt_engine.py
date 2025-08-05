@@ -1,7 +1,10 @@
+# core/prompt_engine.py (UPDATED)
 import json
+
 def create_prompt(schema: str, text: str, error: str = None):
     """
-    Generates a detailed prompt with multi-shot learning, schema logic, error feedback, and nested JSON support.
+    Generates a detailed prompt with multi-shot learning, schema logic,
+    error feedback, and nested JSON support.
     """
     # Examples: multiple nested schemas
     examples = [
@@ -72,25 +75,21 @@ def create_prompt(schema: str, text: str, error: str = None):
 Example {idx}:
 Schema:
 {json.dumps(ex['schema'], indent=2)}
-
-Text:
-{ex['text']}
-
-Output:
-{json.dumps(ex['output'], indent=2)}
-
-"""
+Text: 
+{ex['text']} 
+Output: {json.dumps(ex['output'], indent=2)} """
 
     # Optional error loop section
     error_text = f"""
-⚠️ Note: The previous output failed validation:
+⚠ Note: The previous output failed validation:
 {error}
 Please fix field mismatches or types as per schema.
 """ if error else ""
 
     # Prompt core
     prompt = f"""
-You are a structured data extraction assistant. Your job is to extract a valid JSON object from raw text using the provided JSON schema.
+You are a structured data extraction assistant. Your job is to extract
+a valid JSON object from raw text using the provided JSON schema.
 
 Instructions:
 - Output only the final JSON (no explanations).
@@ -113,7 +112,75 @@ Instructions:
 === END TEXT ===
 
 {example_section}
-🟢 Now, generate the JSON output that exactly follows the schema using the input text above.
+
+ Now, generate the JSON output that exactly follows the schema using the input text above.
 Only respond with the raw JSON object.
+"""
+
+    return prompt.strip()
+
+
+def create_focused_prompt(schema: str, text: str, context: dict = None, attempt: int = 0):
+    """
+    NEW: Creates context-aware prompts for chunk processing
+    """
+    context_section = ""
+    
+    if context:
+        # Add previous entity information
+        if context.get('previous_entities'):
+            entities_text = []
+            for entity_type, values in context['previous_entities'].items():
+                if values:
+                    entities_text.append(f"{entity_type}: {', '.join(list(values)[:3])}")
+            
+            if entities_text:
+                context_section += f"""
+CONTEXT - Previously extracted entities:
+{chr(10).join(entities_text)}
+Use this context to maintain consistency and avoid duplicates.
+"""
+        
+        # Add chunk information
+        if context.get('chunk_info'):
+            chunk_info = context['chunk_info']
+            context_section += f"""
+CHUNK INFO: Processing chunk {chunk_info['index'] + 1} of {chunk_info['total']}
+Content type: {chunk_info['content_type']}
+"""
+    
+    # Attempt-specific instructions
+    attempt_section = ""
+    if attempt > 0:
+        attempt_section = f"""
+RETRY ATTEMPT {attempt + 1}: Previous attempts failed. 
+Focus on extracting only the most certain information.
+If unsure about a field, use null rather than guessing.
+"""
+
+    prompt = f"""
+You are processing a chunk of a larger document for structured data extraction.
+Extract ONLY the information that is clearly present in this specific chunk.
+
+{context_section}
+
+{attempt_section}
+
+=== SCHEMA ===
+{schema}
+=== END SCHEMA ===
+
+=== TEXT CHUNK ===
+{text}
+=== END CHUNK ===
+
+Instructions:
+- Extract only information that is explicitly stated in this chunk
+- Use exact field names and types from the schema
+- If information is not in this chunk, use null for that field
+- Maintain consistency with previously extracted entities when possible
+- Output only valid JSON, no explanations
+
+JSON Output:
 """
     return prompt.strip()
