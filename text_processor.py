@@ -1,7 +1,7 @@
 import re
 import nltk
 import spacy
-from typing import List, Dict, Tuple
+from typing import List, Dict, Tuple, Any
 import streamlit as st
 from config import Config
 
