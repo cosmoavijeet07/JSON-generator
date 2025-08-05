@@ -1,108 +1,64 @@
 import json
-def create_prompt(schema: str, text: str, error: str = None):
-    """
-    Generates a detailed prompt with multi-shot learning, schema logic, error feedback, and nested JSON support.
-    """
-    # Examples: multiple nested schemas
-    examples = [
-        {
-            "schema": {
-                "title": "AuthorInfo",
-                "type": "object",
-                "properties": {
-                    "name": {"type": "string"},
-                    "age": {"type": "integer"},
-                    "email": {"type": "string"},
-                    "affiliation": {
-                        "type": "object",
-                        "properties": {
-                            "organization": {"type": "string"},
-                            "country": {"type": "string"}
-                        },
-                        "required": ["organization"]
-                    }
-                },
-                "required": ["name", "email", "affiliation"]
-            },
-            "text": "Dr. Jane Smith is a professor at Stanford University in the US. You can reach her at jane@stanford.edu.",
-            "output": {
-                "name": "Dr. Jane Smith",
-                "email": "jane@stanford.edu",
-                "affiliation": {
-                    "organization": "Stanford University",
-                    "country": "US"
-                }
-            }
-        },
-        {
-            "schema": {
-                "type": "object",
-                "properties": {
-                    "title": {"type": "string"},
-                    "authors": {
-                        "type": "array",
-                        "items": {
-                            "type": "object",
-                            "properties": {
-                                "name": {"type": "string"},
-                                "orcid": {"type": "string"}
-                            },
-                            "required": ["name"]
-                        }
-                    },
-                    "year": {"type": "integer"}
-                },
-                "required": ["title", "authors"]
-            },
-            "text": "The paper titled 'Quantum Gravity Explained' was authored by Alan Turing and Emmy Noether in 2020. ORCID for Alan is 0000-0001-2345-6789.",
-            "output": {
-                "title": "Quantum Gravity Explained",
-                "authors": [
-                    {"name": "Alan Turing", "orcid": "0000-0001-2345-6789"},
-                    {"name": "Emmy Noether"}
-                ],
-                "year": 2020
-            }
-        }
-    ]
+from typing import List, Optional
 
+def create_advanced_prompt(
+    schema: str,
+    text: str,
+    error: Optional[str] = None,
+    task_fields: Optional[List[str]] = None,
+    examples: Optional[List[dict]] = None,
+    pass_num: int = 1,
+    cascade_mode: bool = False,
+    fuzzy_mode: bool = False,
+    chunk_id: Optional[int] = None,
+    guidance: Optional[str] = None,
+) -> str:
     example_section = ""
-    for idx, ex in enumerate(examples, 1):
-        example_section += f"""
-Example {idx}:
+    if examples:
+        example_section = "\n".join([
+            f"""Example {i+1}:
 Schema:
-{json.dumps(ex['schema'], indent=2)}
+{json.dumps(e['schema'], indent=2)}
 
 Text:
-{ex['text']}
+{e['text']}
 
 Output:
-{json.dumps(ex['output'], indent=2)}
-
+{json.dumps(e['output'], indent=2)}
+""" for i, e in enumerate(examples)
+        ])
+    error_text = ""
+    if error:
+        error_text = f"""\n⚠️ Prior output failed validation (reason below). Repair only the MISSING/INVALID fields.
+Error: {error}
 """
+    if task_fields:
+        error_text += f"\n⚡ Only extract or fix these fields/subobjects: {', '.join(task_fields)}"
 
-    # Optional error loop section
-    error_text = f"""
-⚠️ Note: The previous output failed validation:
-{error}
-Please fix field mismatches or types as per schema.
-""" if error else ""
+    pass_text = f"\n🔄 Multi-pass extraction: This is refinement pass #{pass_num}.\n" if pass_num > 1 else ""
+    chunk_text = f"\n[Chunk ID: {chunk_id}]" if chunk_id else ""
+    guidance_text = f"\nUser/system Guidance: {guidance}" if guidance else ""
+    fuzzy_instructions = (
+        "\nIf any field is ambiguous/missing, return a comment as a field value explaining why, "
+        "and suggest how the user or system could resolve the gap."
+    ) if fuzzy_mode else ""
+    cascade_text = "\nCascade Mode enabled: Focus only on this section/branch; later passes will fill remaining fields. Ignore unrelated information." if cascade_mode else ""
 
-    # Prompt core
     prompt = f"""
-You are a structured data extraction assistant. Your job is to extract a valid JSON object from raw text using the provided JSON schema.
+You are an expert structured data extraction assistant. Your job is to extract a valid JSON object from raw text using the provided JSON schema.
 
 Instructions:
-- Output only the final JSON (no explanations).
-- Match the field names, types, and nesting exactly as defined in the schema.
-- Ensure capturing maximum detail from the text.
-- If a field is missing in the text, leave it as `null` or an empty array/object.
-- If a field is optional and not present in the text, do not include it in the output.
-- Do not invent values; omit missing optional fields.
-- Ensure all required fields are present with correct types.
-- If arrays or nested objects are specified, populate them correctly.
+- Output ONLY the JSON object (no explanations outside JSON, except as in-field comments if allowed).
+- Strictly match field names, types, and nesting as defined in the schema.
+- If a field is absent, set it as null or omit if optional.
+- NEVER invent details; only use information present in the input.
 
 {error_text}
+{pass_text}
+{cascade_text}
+{fuzzy_instructions}
+{chunk_text}
+{guidance_text}
 
 === INPUT SCHEMA ===
 {schema}
@@ -113,7 +69,7 @@ Instructions:
 === END TEXT ===
 
 {example_section}
-🟢 Now, generate the JSON output that exactly follows the schema using the input text above.
-Only respond with the raw JSON object.
+
+🟢 Generate only the JSON output, matching the schema, capturing all concrete details from the input above.
 """
     return prompt.strip()

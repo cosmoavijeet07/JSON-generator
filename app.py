@@ -1,6 +1,5 @@
 import streamlit as st
-import os
-import json
+import os, json
 from dotenv import load_dotenv
 
 from core import (
@@ -10,42 +9,30 @@ from core import (
     json_extractor,
     logger_service,
     session_manager,
-    token_estimator
+    token_estimator,
+    semantic_chunker,
+    aggregator,
+    iterative_extractor,
+    preprocessor
 )
-
 load_dotenv()
 
 st.set_page_config(page_title="AI JSON Extractor", layout="centered")
 st.title("🧠 Structured JSON Extractor")
 
-# === 🔘 Model Selector ===
+ADV = st.sidebar.expander("⚙️ Advanced Settings", expanded=False)
+chunk_size = ADV.slider("Chunk token size", 1000, 8000, 3500)
+overlap = ADV.slider("Chunk overlap", 0, 700, 200)
+passes = ADV.slider("Max extraction passes per chunk", 1, 4, 2)
+
 model_map = {
     "GPT 4.1": "gpt-4.1-2025-04-14",
     "GPT O4 Mini": "o4-mini-2025-04-16"
 }
 
-selected_model_label = st.selectbox(
-    "Choose Model:",
-    options=list(model_map.keys()),
-    index=0
-)
-
-selected_model = model_map[selected_model_label]
-
-st.markdown(
-    f"""
-**Model Notes**  
-- 🧠 **GPT 4.1**: Recommended for well-structured schemas with fewer fields  
-- 🧩 **GPT O4 Mini**: Best for very large text files, complex nesting schemas, and long output (up to 100k tokens)
-"""
-)
-
-# === 📝 File Uploads ===
+selected_model = st.selectbox("Choose Model:", list(model_map.values()), 0)
 schema_file = st.file_uploader("Upload JSON Schema", type=["json"])
 text_file = st.file_uploader("Upload Text File", type=["txt", "pdf"])
-
-generated_result = None
-session_id = None
 
 if st.button("Generate JSON"):
     if not schema_file or not text_file:
@@ -53,84 +40,30 @@ if st.button("Generate JSON"):
     else:
         schema_str = schema_file.read().decode()
         text_str = text_file.read().decode()
+        try:
+            schema_json = json.loads(schema_str)
+        except Exception as e:
+            st.error(f"Schema JSON is invalid: {e}")
+            st.stop()
 
-        schema_json = json.loads(schema_str)
         is_valid, schema_err = schema_validator.is_valid_schema(schema_json)
-
         if not is_valid:
             st.error(f"❌ Invalid schema: {schema_err}")
-        else:
-            session_id = session_manager.create_session()
-            logger_service.log(session_id, "model_used", selected_model)
-            logger_service.log(session_id, "schema", schema_str)
-            logger_service.log(session_id, "text", text_str)
+            st.stop()
 
-            est_tokens = token_estimator.estimate_tokens(schema_str + text_str)
-            st.info(f"🔢 Estimated tokens for input: {est_tokens}")
-
-            err = None
-            success = False
-
-            for attempt in range(3):
-                with st.status(f"🧪 Attempt {attempt+1}...", expanded=True):
-                    prompt = prompt_engine.create_prompt(schema_str, text_str, error=err)
-                    logger_service.log(session_id, f"prompt_{attempt+1}", prompt)
-
-                    output = llm_interface.call_llm(prompt, model=selected_model)
-                    logger_service.log(session_id, f"output_{attempt+1}", output)
-
-                    try:
-                        result = json_extractor.extract_json(output)
-                        valid, err = json_extractor.validate_against_schema(schema_json, result)
-                        if valid:
-                            success = True
-                            generated_result = result
-                            output_path = f"logs/{session_id}/final_output.json"
-                            with open(output_path, "w") as f:
-                                json.dump(result, f, indent=2)
-                            break
-                    except Exception as e:
-                        err = str(e)
-                        st.warning(f"⚠️ Error: {err}")
-
-            if not success:
-                st.error("❌ Failed to extract valid JSON after 3 attempts.")
-                st.download_button(
-                    "📄 Download Logs",
-                    data=json.dumps({"error": err}),
-                    file_name=f"{session_id}_error.log"
-                )
-            else:
-                st.success("✅ JSON generated successfully!")
-
-# Save to session_state if generation was successful
-if generated_result:
-    st.session_state["generated_result"] = generated_result
-    st.session_state["session_id"] = session_id
-
-# === 📤 Post-Generation Display + Downloads ===
-if "generated_result" in st.session_state and st.session_state["generated_result"]:
-    st.markdown("### 🎯 Extracted JSON")
-    st.json(st.session_state["generated_result"])
-
-    st.download_button(
-        "📥 Download JSON",
-        data=json.dumps(st.session_state["generated_result"], indent=2),
-        file_name="output.json",
-        key="download-json"
-    )
-
-if "session_id" in st.session_state and st.session_state["session_id"]:
-    sid = st.session_state["session_id"]
-    log_data = "\n".join(
-        open(f"logs/{sid}/{f}", encoding="utf-8").read()
-        for f in os.listdir(f"logs/{sid}")
-        if f.endswith(".log")
-    )
-
-    st.download_button(
-        "📄 Download Logs",
-        data=log_data,
-        file_name=f"{sid}_session.log",
-        key="download-logs"
-    )
+        session_id = session_manager.create_session()
+        logger_service.log(session_id, "model_used", selected_model)
+        text_cleaned = preprocessor.clean_ocr(text_str)
+        chunks = semantic_chunker.split_semantic(text_cleaned, max_len=chunk_size, overlap=overlap)
+        st.info(f"Chunked input into {len(chunks)} sections.")
+        def llm_fn(prompt): return llm_interface.call_llm(prompt, model=selected_model)
+        results = iterative_extractor.iterative_schema_extract(
+            llm_fn, prompt_engine, schema_str, chunks, json_extractor.validate_against_schema, max_passes=passes
+        )
+        logger_service.log(session_id, "raw_outputs", json.dumps(results, indent=2))
+        final = aggregator.merge_json_outputs(results, schema_json)
+        with open(f"logs/{session_id}/final_output.json", "w") as f:
+            json.dump(final, f, indent=2)
+        st.success("Extraction complete!")
+        st.json(final)
+        st.download_button("Download JSON", data=json.dumps(final, indent=2), file_name="output.json")
