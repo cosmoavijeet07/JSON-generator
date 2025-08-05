@@ -2,6 +2,8 @@ import re
 try:
     import spacy
     nlp = spacy.blank("en")
+    if "sentencizer" not in nlp.pipe_names:
+        nlp.add_pipe("sentencizer")
     HAS_SPACY = True
 except ImportError:
     HAS_SPACY = False

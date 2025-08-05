@@ -1,19 +1,10 @@
-# LLM + Tokenizer
-openai
-tiktoken
-
-# Schema validation
-jsonschema
-pydantic
-
-# Core functionality
-python-dotenv
-rich
-
-# Frontend (Streamlit UI)
 streamlit
-
-# FastAPI API Server
 fastapi
-uvicorn[standard]
-python-multipart
+openai
+jsonschema
+python-dotenv
+tiktoken
+spacy
+sentence-transformers
+faiss-cpu
+nltk
