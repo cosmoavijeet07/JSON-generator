@@ -105,6 +105,16 @@ if st.button("🚀 Generate JSON", type="primary"):
             
             st.write("Performing semantic chunking...")
             chunks = semantic_chunker.split_semantic(text_cleaned, max_len=chunk_size, overlap=overlap)
+            # In the preprocessing section, add validation
+
+# Add validation step
+            try:
+                semantic_chunker.validate_chunks(chunks, chunk_size)
+                st.write(f"✅ All {len(chunks)} chunks respect max length of {chunk_size} words")
+            except ValueError as e:
+                st.error(f"❌ Chunking validation failed: {e}")
+                st.stop()
+
             
             st.write(f"✅ Split into {len(chunks)} semantic chunks")
             status.update(label="✅ Preprocessing complete!", state="complete")
