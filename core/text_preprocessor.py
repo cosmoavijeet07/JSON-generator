@@ -11,7 +11,9 @@ class TextPreprocessor:
         try:
             self.nlp = spacy.load("en_core_web_sm")
         except OSError:
-            print("Please install spacy model: python -m spacy download en_core_web_sm")
+            print("⚠️ SpaCy model not found. Downloading 'en_core_web_sm'...")
+            spacy.cli.download("en_core_web_sm")
+            self.nlp = spacy.load("en_core_web_sm")
         self.sentence_model = SentenceTransformer('all-MiniLM-L6-v2')
     
     def detect_document_structure(self, text: str) -> Dict:

@@ -2,7 +2,8 @@
 .env
 
 # Ignore Python virtual environment folder
-env/
+venv/
+wenv/
 
 # Ignore logs
 logs/
