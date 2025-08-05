@@ -14,37 +14,68 @@ from core import (
     aggregator,
     iterative_extractor,
     preprocessor,
-    post_processor  # NEW IMPORT
+    post_processor
 )
 load_dotenv()
 
 st.set_page_config(page_title="AI JSON Extractor", layout="centered")
 st.title("🧠 Structured JSON Extractor")
-st.write("Advanced AI-powered extraction with post-processing validation")
+st.write("Advanced AI-powered extraction with chunking, multi-pass processing, and post-validation")
 
-# [Previous UI code remains the same...]
-
+# Advanced Settings Sidebar
 ADV = st.sidebar.expander("⚙️ Advanced Settings", expanded=False)
 chunk_size = ADV.slider("Chunk token size", 1000, 8000, 3500)
 overlap = ADV.slider("Chunk overlap", 0, 700, 200)
 passes = ADV.slider("Max extraction passes per chunk", 1, 4, 2)
-rectification_attempts = ADV.slider("Post-processing rectification attempts", 1, 5, 3)  # NEW
+rectification_attempts = ADV.slider("Post-processing rectification attempts", 1, 5, 3)
 
+# Model Selection
 model_map = {
     "GPT 4.1": "gpt-4.1-2025-04-14",
     "GPT O4 Mini": "o4-mini-2025-04-16"
 }
 
 selected_model = st.selectbox("Choose Model:", list(model_map.values()), 0)
+
+st.markdown(f"""
+**Model Notes**  
+- 🧠 **GPT 4.1**: Recommended for well-structured schemas with fewer fields  
+- 🧩 **GPT O4 Mini**: Best for very large text files, complex nesting schemas, and long output (up to 100k tokens)
+""")
+
+# File Uploads
 schema_file = st.file_uploader("Upload JSON Schema", type=["json"])
 text_file = st.file_uploader("Upload Text File", type=["txt", "pdf"])
 
-# [Token estimation code remains the same...]
+# Token Estimation (before processing)
+if schema_file and text_file:
+    schema_str = schema_file.read().decode()
+    text_str = text_file.read().decode()
+    
+    # Reset file pointers for later use
+    schema_file.seek(0)
+    text_file.seek(0)
+    
+    # Estimate tokens
+    total_tokens = token_estimator.estimate_tokens(schema_str + text_str, model=selected_model)
+    text_cleaned = preprocessor.clean_ocr(text_str)
+    chunks = semantic_chunker.split_semantic(text_cleaned, max_len=chunk_size, overlap=overlap)
+    
+    # Display token info
+    st.info(f"""
+    📊 **Processing Estimates:**
+    - Total input tokens: **{total_tokens:,}**
+    - Text will be split into: **{len(chunks)} chunks**
+    - Max passes per chunk: **{passes}**
+    - Expected API calls: **~{len(chunks) * passes}**
+    """)
 
+# Main Processing Button
 if st.button("🚀 Generate JSON", type="primary"):
     if not schema_file or not text_file:
         st.error("Please upload both JSON schema and input text.")
     else:
+        # Read files
         schema_str = schema_file.read().decode()
         text_str = text_file.read().decode()
         
@@ -54,17 +85,20 @@ if st.button("🚀 Generate JSON", type="primary"):
             st.error(f"❌ Schema JSON is invalid: {e}")
             st.stop()
 
+        # Validate schema
         is_valid, schema_err = schema_validator.is_valid_schema(schema_json)
         if not is_valid:
             st.error(f"❌ Invalid schema: {schema_err}")
             st.stop()
 
+        # Initialize session and logging
         session_id = session_manager.create_session()
         logger_service.log(session_id, "model_used", selected_model)
+        
+        # Store session info in session state
         st.session_state['current_session_id'] = session_id
         
-        # [Preprocessing and chunking code remains the same...]
-        
+        # Preprocessing phase
         with st.status("🔧 Preprocessing text...", expanded=True) as status:
             st.write("Cleaning OCR artifacts and noise...")
             text_cleaned = preprocessor.clean_ocr(text_str)
@@ -75,19 +109,18 @@ if st.button("🚀 Generate JSON", type="primary"):
             st.write(f"✅ Split into {len(chunks)} semantic chunks")
             status.update(label="✅ Preprocessing complete!", state="complete")
 
-        # [Extraction phase code remains the same...]
-        
+        # Extraction phase with progress
         progress_bar = st.progress(0)
         status_text = st.empty()
         
         def llm_fn(prompt): 
             return llm_interface.call_llm(prompt, model=selected_model)
         
+        # Custom iterative extraction with progress tracking
         all_results = []
         total_chunks = len(chunks)
         
         with st.status("🧠 Extracting structured data...", expanded=True) as extraction_status:
-            # [Per-chunk extraction logic remains the same...]
             for i, chunk in enumerate(chunks):
                 status_text.text(f"Processing chunk {i+1}/{total_chunks}...")
                 progress_bar.progress((i) / total_chunks)
@@ -97,6 +130,7 @@ if st.button("🚀 Generate JSON", type="primary"):
                 partial = None
                 errors = None
                 
+                # Multi-pass extraction for this chunk
                 for attempt in range(passes):
                     try:
                         prompt = prompt_engine.create_advanced_prompt(
@@ -137,7 +171,7 @@ if st.button("🚀 Generate JSON", type="primary"):
             
             merge_status.update(label="✅ Initial merge complete!", state="complete")
         
-        # NEW: Post-processing validation and rectification phase
+        # Post-processing validation and rectification phase
         with st.status("🔍 Post-processing validation & rectification...", expanded=True) as validation_status:
             st.write("Validating final JSON against schema...")
             
@@ -201,8 +235,7 @@ if st.button("🚀 Generate JSON", type="primary"):
             - Session ID: `{session_id}`
             """)
 
-# [Results display section remains largely the same, but add validation status...]
-
+# Results Display Section (Persistent)
 if st.session_state.get('processing_complete', False):
     st.markdown("---")
     st.markdown("### 🎯 **Final Validated JSON Result**")
@@ -226,9 +259,6 @@ if st.session_state.get('processing_complete', False):
     # Display JSON
     st.json(st.session_state['generated_result'])
     
-    # [Download buttons remain the same...]
-
-    
     # Download Buttons Row
     col1, col2, col3 = st.columns(3)
     
@@ -248,12 +278,15 @@ if st.session_state.get('processing_complete', False):
             log_dir = f"logs/{session_id}"
             
             if os.path.exists(log_dir):
-                log_files = [f for f in os.listdir(log_dir) if f.endswith('.log')]
+                log_files = [f for f in os.listdir(log_dir) if f.endswith('.log') or f.endswith('.json')]
                 all_logs = {}
                 
                 for log_file in log_files:
-                    with open(f"{log_dir}/{log_file}", "r", encoding="utf-8") as f:
-                        all_logs[log_file] = f.read()
+                    try:
+                        with open(f"{log_dir}/{log_file}", "r", encoding="utf-8") as f:
+                            all_logs[log_file] = f.read()
+                    except:
+                        all_logs[log_file] = "Error reading file"
                 
                 log_data = json.dumps(all_logs, indent=2)
                 
@@ -270,7 +303,7 @@ if st.session_state.get('processing_complete', False):
     with col3:
         if st.button("🔄 Process New Document"):
             # Clear session state for new processing
-            for key in ['generated_result', 'processing_complete', 'current_session_id', 'chunk_count', 'total_passes']:
+            for key in ['generated_result', 'processing_complete', 'current_session_id', 'chunk_count', 'total_passes', 'validation_success', 'validation_error']:
                 if key in st.session_state:
                     del st.session_state[key]
             st.rerun()
@@ -283,6 +316,7 @@ with st.sidebar:
     - ✅ **Semantic Chunking**: Smart text splitting
     - ✅ **Multi-pass Extraction**: Error correction
     - ✅ **Schema Validation**: Strict conformance  
+    - ✅ **Post-processing**: Final validation & rectification
     - ✅ **Progress Tracking**: Real-time status
     - ✅ **Persistent Results**: Download anytime
     - ✅ **Complete Logging**: Full audit trail
