@@ -1,0 +1,143 @@
+{
+  "abstract": "PhyloTree provides a comprehensive suite of algorithms for phylogenetic tree reconstruction and analysis, incorporating state-of-the-art statistical methods and computational optimizations. The software supports multiple sequence alignment formats, implements various evolutionary models, and offers both command-line and graphical user interfaces. Advanced features include parallel processing capabilities, bootstrap analysis, and integration with popular bioinformatics databases.",
+  "authors": [
+    {
+      "family-names": "Chen",
+      "given-names": "Sarah",
+      "affiliation": "Department of Molecular and Cell Biology, University of California Berkeley",
+      "email": "sarah.chen@berkeley.edu",
+      "orcid": "https://orcid.org/0000-0002-1825-0097"
+    },
+    {
+      "family-names": "Rodriguez",
+      "given-names": "Michael Antonio",
+      "affiliation": "Stanford University",
+      "email": "mrodriguez@stanford.edu",
+      "tel": "+1-650-723-4567",
+      "address": "318 Campus Drive, Stanford, CA 94305, United States",
+      "post-code": "94305",
+      "region": "California",
+      "country": "US"
+    },
+    {
+      "family-names": "Tanaka",
+      "given-names": "Yuki Emiko",
+      "name-particle": "Dr.",
+      "affiliation": "Department of Computer Science, Tokyo Institute of Technology; Center for Computational Biology, Tokyo Institute of Technology",
+      "website": "https://www.titech.ac.jp/~tanaka"
+    },
+    {
+      "family-names": "Thompson",
+      "given-names": "Emma",
+      "affiliation": "Babraham Institute",
+      "email": "e.thompson@babraham.ac.uk",
+      "tel": "+44-1223-496000",
+      "fax": "+44-1223-496002",
+      "address": "Babraham Campus, Cambridge CB22 3AT, United Kingdom",
+      "post-code": "CB22 3AT",
+      "city": "Cambridge",
+      "country": "GB"
+    },
+    {
+      "family-names": "Li",
+      "given-names": "Wei",
+      "affiliation": "Institute of Computational Biology, Chinese Academy of Sciences",
+      "address": "Institute of Computational Biology, Chinese Academy of Sciences, 16 Lincui Road, Chaoyang District, Beijing 100101, People's Republic of China",
+      "post-code": "100101",
+      "city": "Beijing",
+      "country": "CN"
+    }
+  ],
+  "cff-version": "1.2.0",
+  "commit": "7f4a5b2c8e1d9f6a3b8c5e2d7f0a4b6c9e1d3f5a",
+  "contact": [
+    {
+      "family-names": "Rodriguez",
+      "given-names": "Michael Antonio",
+      "affiliation": "Stanford University",
+      "email": "mrodriguez@stanford.edu",
+      "tel": "+1-650-723-4567",
+      "address": "318 Campus Drive, Stanford, CA 94305, United States",
+      "post-code": "94305",
+      "region": "California",
+      "country": "US"
+    }
+  ],
+  "date-released": "2023-12-15",
+  "doi": "10.5281/zenodo.8765432",
+  "identifiers": [
+    {
+      "type": "doi",
+      "value": "10.5281/zenodo.8765432"
+    },
+    {
+      "type": "swh",
+      "value": "swh:1:rev:309cf2674ee7a0749978cf8265ab91a60aea0f7d"
+    }
+  ],
+  "keywords": [
+    "phylogenetics",
+    "bioinformatics",
+    "molecular evolution",
+    "maximum likelihood",
+    "Bayesian inference",
+    "sequence alignment",
+    "tree reconstruction",
+    "computational biology",
+    "genomics",
+    "evolutionary analysis",
+    "statistical modeling",
+    "algorithm optimization"
+  ],
+  "languages": [
+    "en",
+    "zh",
+    "ja",
+    "de",
+    "fr",
+    "es",
+    "it",
+    "pt",
+    "ru",
+    "ar"
+  ],
+  "license": [
+    "GPL-3.0-only",
+    "MIT",
+    "Apache-2.0",
+    "BSD-3-Clause"
+  ],
+  "license-url": "https://phylotree.org/licenses/custom-v1.0.txt",
+  "message": "If you use this software, please cite it using the metadata from this file.",
+  "preferred-citation": {
+    "authors": [
+      {
+        "family-names": "Chen",
+        "given-names": "Sarah"
+      },
+      {
+        "family-names": "Rodriguez",
+        "given-names": "Michael Antonio"
+      },
+      {
+        "family-names": "Tanaka",
+        "given-names": "Yuki Emiko"
+      }
+    ],
+    "title": "PhyloTree: Advanced algorithms for phylogenetic reconstruction and analysis",
+    "type": "article",
+    "journal": "Journal of Computational Biology",
+    "volume": 45,
+    "issue": 12,
+    "pages": "2345-2367",
+    "year": 2023,
+    "doi": "10.1089/cmb.2023.0456"
+  },
+  "repository": "https://github.com/phylogenomics/phylotree",
+  "repository-artifact": "https://releases.phylotree.org/v2.1.4/",
+  "repository-code": "https://github.com/phylogenomics/phylotree",
+  "url": "https://www.phylotree.org",
+  "title": "PhyloTree 2.1.4",
+  "type": "software",
+  "version": "2.1.4"
+}
