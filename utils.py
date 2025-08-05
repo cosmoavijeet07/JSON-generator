@@ -81,25 +81,48 @@ class SchemaValidator:
             if not isinstance(schema_data, dict):
                 return False, "Schema must be a JSON object"
             
-            # Check for basic schema properties
-            if 'type' not in schema_data:
-                return False, "Schema must have a 'type' property"
+            # Check for basic schema properties - be more flexible
+            # A schema can be valid without 'type' if it has other valid schema keywords
+            valid_root_keywords = {
+                'type', 'properties', 'items', 'additionalProperties', 
+                'required', 'enum', 'const', 'anyOf', 'oneOf', 'allOf',
+                '$ref', '$schema', '$id', 'title', 'description', 
+                'default', 'examples', 'minimum', 'maximum', 'pattern',
+                'minLength', 'maxLength', 'minItems', 'maxItems'
+            }
             
-            if schema_data.get('type') == 'object' and 'properties' not in schema_data:
-                return False, "Object type schema must have 'properties'"
+            # Check if schema has at least one valid keyword
+            if not any(keyword in schema_data for keyword in valid_root_keywords):
+                return False, "Schema must contain at least one valid JSON Schema keyword"
             
-            # Validate properties structure
-            if 'properties' in schema_data:
+            # If it's an object type, validate properties structure
+            if schema_data.get('type') == 'object' and 'properties' in schema_data:
                 properties = schema_data['properties']
                 if not isinstance(properties, dict):
                     return False, "'properties' must be an object"
                 
+                # Validate each property - be more flexible
                 for prop_name, prop_schema in properties.items():
                     if not isinstance(prop_schema, dict):
                         return False, f"Property '{prop_name}' schema must be an object"
                     
-                    if 'type' not in prop_schema:
-                        return False, f"Property '{prop_name}' must have a 'type'"
+                    # A property is valid if it has any valid schema keywords
+                    # Not every property needs a 'type' - it could have $ref, anyOf, etc.
+                    valid_prop_keywords = {
+                        'type', 'enum', 'const', 'anyOf', 'oneOf', 'allOf',
+                        '$ref', 'properties', 'items', 'additionalProperties',
+                        'title', 'description', 'default', 'examples',
+                        'minimum', 'maximum', 'pattern', 'minLength', 'maxLength',
+                        'minItems', 'maxItems', 'format'
+                    }
+                    
+                    if not any(keyword in prop_schema for keyword in valid_prop_keywords):
+                        return False, f"Property '{prop_name}' must contain at least one valid schema keyword"
+            
+            # Additional validation for array schemas
+            if schema_data.get('type') == 'array':
+                if 'items' in schema_data and not isinstance(schema_data['items'], (dict, list)):
+                    return False, "'items' must be an object or array"
             
             return True, "Valid JSON schema"
             
@@ -118,6 +141,7 @@ class SchemaValidator:
             for prop_schema in props.values():
                 prop_type = prop_schema.get('type')
                 
+                # Handle different schema patterns
                 if prop_type == 'object' and 'properties' in prop_schema:
                     analyze_properties(prop_schema['properties'], depth + 1)
                 elif prop_type == 'array':
@@ -126,9 +150,26 @@ class SchemaValidator:
                     if isinstance(items_schema, dict) and items_schema.get('type') == 'object':
                         if 'properties' in items_schema:
                             analyze_properties(items_schema['properties'], depth + 1)
+                
+                # Handle schema composition (anyOf, oneOf, allOf)
+                for composition_key in ['anyOf', 'oneOf', 'allOf']:
+                    if composition_key in prop_schema:
+                        complexity_score += 3  # Composition adds complexity
+                        for sub_schema in prop_schema[composition_key]:
+                            if isinstance(sub_schema, dict) and 'properties' in sub_schema:
+                                analyze_properties(sub_schema['properties'], depth + 1)
+                
+                # Handle $ref (references add some complexity)
+                if '$ref' in prop_schema:
+                    complexity_score += 2
         
         if 'properties' in schema:
             analyze_properties(schema['properties'])
+        
+        # Handle root-level composition
+        for composition_key in ['anyOf', 'oneOf', 'allOf']:
+            if composition_key in schema:
+                complexity_score += 5
         
         if complexity_score < 10:
             return "low"
