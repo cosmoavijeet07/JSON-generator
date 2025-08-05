@@ -5,16 +5,25 @@ import spacy
 from sentence_transformers import SentenceTransformer
 import numpy as np
 from sklearn.cluster import KMeans
+import importlib.util
 
 class TextPreprocessor:
     def __init__(self):
+        model_name = "en_core_web_sm"
+        if not self._is_spacy_model_installed(model_name):
+            import spacy.cli
+            print(f"⚠️ Auto-downloading spaCy model '{model_name}'...")
+            spacy.cli.download(model_name)
+
         try:
-            self.nlp = spacy.load("en_core_web_sm")
-        except OSError:
-            print("⚠️ SpaCy model not found. Downloading 'en_core_web_sm'...")
-            spacy.cli.download("en_core_web_sm")
-            self.nlp = spacy.load("en_core_web_sm")
+            self.nlp = spacy.load(model_name)
+        except Exception as e:
+            raise RuntimeError(f"❌ Could not load spaCy model '{model_name}': {e}")
         self.sentence_model = SentenceTransformer('all-MiniLM-L6-v2')
+        
+    def _is_spacy_model_installed(self, model_name: str) -> bool:
+        """Check if spaCy model is installed."""
+        return importlib.util.find_spec(model_name) is not None
     
     def detect_document_structure(self, text: str) -> Dict:
         """Detect headers, sections, lists, tables in the document"""
