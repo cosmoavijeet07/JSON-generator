@@ -7,19 +7,11 @@ import spacy
 class TextProcessor:
     class TextProcessor:
         def __init__(self):
-            import nltk, os, shutil
-            nltk.data.path.append("/tmp/nltk_data")
-            nltk.download("punkt", download_dir="/tmp/nltk_data", quiet=True)
-
-            # mirror for punkt_tab lookups
-            P = "/tmp/nltk_data/tokenizers"
-            src = os.path.join(P, "punkt")
-            dst = os.path.join(P, "punkt_tab")
-            if os.path.isdir(src) and not os.path.isdir(dst):
-                shutil.copytree(src, dst)
-
             try:
-                import spacy
+            # Set NLTK download path for Streamlit-safe temp directory
+                nltk.data.path.append("/tmp/nltk_data")
+                nltk.download("punkt_tab", download_dir="/tmp/nltk_data", quiet=True)
+
                 self.nlp = spacy.load("en_core_web_sm")
             except Exception as e:
                 print(f"[TextProcessor Init Error] {e}")
