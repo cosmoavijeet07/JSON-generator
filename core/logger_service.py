@@ -1,7 +1,7 @@
 import os
 import json
 import datetime
-from typing import Any, Optional
+from typing import Any, Optional, List
 from pathlib import Path
 
 class LoggerService:
