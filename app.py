@@ -295,3 +295,6 @@ def main():
                     if "metrics" in result:
                         st.subheader("📊 Metrics")
                         st.text(services["display"].format_metrics(result["metrics"]))
+                        
+if __name__ == "__main__":
+    main()
