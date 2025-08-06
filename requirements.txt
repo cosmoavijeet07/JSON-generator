@@ -1,43 +1,17 @@
-# Core Web Framework Dependencies
 streamlit>=1.28.0
-fastapi>=0.104.0
-uvicorn[standard]>=0.24.0
-pydantic>=2.4.0
-
-# OpenAI and LLM Dependencies
-openai>=1.3.0
+openai>=1.0.0
+anthropic>=0.7.0
 tiktoken>=0.5.0
-
-# Configuration and Environment
-python-dotenv>=1.0.0
-
-# JSON Schema Validation
 jsonschema>=4.19.0
-
-# Natural Language Processing
-nltk>=3.8.1
+jsonref>=1.1.0
+nltk>=3.8.0
 spacy>=3.7.0
-sentence-transformers>=2.2.2
-
-# Machine Learning and Data Processing
 scikit-learn>=1.3.0
 numpy>=1.24.0
-pandas>=2.0.0
-
-# HTTP Requests
-requests>=2.31.0
-
-# File Processing (Optional - for enhanced file support)
-PyPDF2>=3.0.1
-python-docx>=0.8.11
-openpyxl>=3.1.2
-
-# Progress Bars and Logging
-tqdm>=4.66.0
-
-# Additional Utilities
-python-multipart>=0.0.6  # For FastAPI file uploads
-
-
+python-dotenv>=1.0.0
+aiofiles>=23.2.0
+fastapi>=0.104.0
+uvicorn>=0.24.0
+pandas>=2.1.0
 # spaCy language model (mandatory for enhanced mode)
 https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.8.0/en_core_web_sm-3.8.0-py3-none-any.whl
