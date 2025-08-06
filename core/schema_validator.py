@@ -1,6 +1,6 @@
 import json
 from jsonschema import Draft7Validator, validate, ValidationError
-from typing import Dict, Any, Tuple, List
+from typing import Dict, Any, Tuple, List,  Optional
 import jsonref
 
 class SchemaValidator:
