@@ -6,12 +6,9 @@ class TokenEstimator:
     def __init__(self):
         self.encoders = {}
         self.model_limits = {
-            "gpt-4": 8192,
-            "gpt-4-turbo": 128000,
-            "gpt-4o": 128000,
-            "claude-3-opus": 200000,
-            "claude-3-sonnet": 200000,
-            "claude-3.5-sonnet": 200000
+            "gpt-4.1-2025-04-14": 128000,
+            "o4-mini-2025-04-16": 200000,
+            "claude-sonnet-4-20250514": 200000
         }
     
     def get_encoder(self, model: str):
@@ -28,28 +25,28 @@ class TokenEstimator:
         
         return self.encoders[model]
     
-    def estimate_tokens(self, text: str, model: str = "gpt-4") -> int:
+    def estimate_tokens(self, text: str, model: str = "gpt-4.1-2025-04-14") -> int:
         """Estimate token count for text"""
         encoder = self.get_encoder(model)
         return len(encoder.encode(text))
     
-    def estimate_json_tokens(self, data: Dict[str, Any], model: str = "gpt-4") -> int:
+    def estimate_json_tokens(self, data: Dict[str, Any], model: str = "gpt-4.1-2025-04-14") -> int:
         """Estimate tokens for JSON data"""
         json_str = json.dumps(data, indent=2)
         return self.estimate_tokens(json_str, model)
     
-    def can_fit_in_context(self, text: str, model: str = "gpt-4", buffer: int = 1000) -> bool:
+    def can_fit_in_context(self, text: str, model: str = "gpt-4.1-2025-04-14", buffer: int = 1000) -> bool:
         """Check if text fits in model's context window"""
         tokens = self.estimate_tokens(text, model)
         limit = self.model_limits.get(model, 8192)
         return tokens + buffer < limit
     
-    def estimate_chunks_needed(self, text: str, model: str = "gpt-4", chunk_size: int = 2000) -> int:
+    def estimate_chunks_needed(self, text: str, model: str = "gpt-4.1-2025-04-14", chunk_size: int = 2000) -> int:
         """Estimate number of chunks needed"""
         tokens = self.estimate_tokens(text, model)
         return (tokens + chunk_size - 1) // chunk_size
     
-    def analyze_content(self, text: str, schema: Dict[str, Any], model: str = "gpt-4") -> Dict[str, Any]:
+    def analyze_content(self, text: str, schema: Dict[str, Any], model: str = "gpt-4.1-2025-04-14") -> Dict[str, Any]:
         """Analyze content and provide token metrics"""
         text_tokens = self.estimate_tokens(text, model)
         schema_tokens = self.estimate_json_tokens(schema, model)

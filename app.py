@@ -62,12 +62,9 @@ def main():
         
         # Model selection
         model_options = {
-            "GPT-4": "gpt-4",
-            "GPT-4 Turbo": "gpt-4-turbo",
-            "GPT-4o": "gpt-4o",
-            "Claude 3 Opus": "claude-3-opus",
-            "Claude 3 Sonnet": "claude-3-sonnet",
-            "Claude 3.5 Sonnet": "claude-3.5-sonnet"
+            "GPT 4.1": "gpt-4.1-2025-04-14",
+            "GPT O4 Mini": "o4-mini-2025-04-16",
+            "Claude Sonnet 4": "claude-sonnet-4-20250514"
         }
         
         selected_model = st.selectbox(

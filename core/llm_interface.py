@@ -13,23 +13,20 @@ class LLMInterface:
         self.anthropic_client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
         
         self.models = {
-            "gpt-4": {"provider": "openai", "max_tokens": 8192},
-            "gpt-4-turbo": {"provider": "openai", "max_tokens": 128000},
-            "gpt-4o": {"provider": "openai", "max_tokens": 128000},
-            "claude-3-opus": {"provider": "anthropic", "max_tokens": 200000},
-            "claude-3-sonnet": {"provider": "anthropic", "max_tokens": 200000},
-            "claude-3.5-sonnet": {"provider": "anthropic", "max_tokens": 200000}
+            "gpt-4.1-2025-04-14": {"provider": "openai", "max_tokens": 128000},
+            "o4-mini-2025-04-16": {"provider": "openai", "max_tokens": 200000},
+            "claude-sonnet-4-20250514": {"provider": "anthropic", "max_tokens": 200000}
         }
     
     def call_llm(self, 
                  prompt: str, 
-                 model: str = "gpt-4-turbo",
+                 model:  str = "gpt-4.1-2025-04-14",
                  temperature: float = 0.1,
                  max_retries: int = 3,
                  system_prompt: Optional[str] = None) -> str:
         """Call LLM with retry logic and error handling"""
         
-        model_info = self.models.get(model, self.models["gpt-4-turbo"])
+        model_info = self.models.get(model, self.models["gpt-4.1-2025-04-14"])
         
         for attempt in range(max_retries):
             try:
@@ -74,9 +71,8 @@ class LLMInterface:
         """Estimate cost based on token count and model"""
         # Add pricing logic here
         pricing = {
-            "gpt-4": 0.03,
-            "gpt-4-turbo": 0.01,
-            "claude-3-opus": 0.015,
-            "claude-3-sonnet": 0.003
+            "gpt-4.1-2025-04-14": 0.01,
+            "o4-mini-2025-04-16": 0.002,
+            "claude-sonnet-4-20250514": 0.003
         }
         return tokens * pricing.get(model, 0.01) / 1000

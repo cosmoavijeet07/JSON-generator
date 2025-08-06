@@ -18,7 +18,7 @@ class SimplePipeline:
         
         schema = input_data["schema"]
         text = input_data["text"]
-        model = input_data.get("model", "gpt-4-turbo")
+        model = input_data.get("model", "gpt-4.1-2025-04-14")
         session_id = input_data.get("session_id")
         
         self.logger.log("pipeline", "start", {"type": "simple", "model": model})
