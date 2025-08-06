@@ -5,12 +5,17 @@ from nltk.tokenize import sent_tokenize, word_tokenize
 import spacy
 
 class TextProcessor:
-    def __init__(self):
-        try:
-            nltk.download('punkt', quiet=True)
-            self.nlp = spacy.load("en_core_web_sm")
-        except:
-            self.nlp = None
+    class TextProcessor:
+        def __init__(self):
+            try:
+                # Ensure nltk punkt tokenizer is downloaded to correct path
+                nltk.data.path.append("/tmp/nltk_data")
+                nltk.download("punkt", download_dir="/tmp/nltk_data", quiet=True)
+
+                self.nlp = spacy.load("en_core_web_sm")
+            except Exception as e:
+                print(f"[TextProcessor Init Error] {e}")
+                self.nlp = None
     
     def analyze_document(self, text: str) -> Dict[str, Any]:
         """Analyze document structure and content"""

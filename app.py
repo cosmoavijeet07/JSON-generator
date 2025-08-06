@@ -297,4 +297,6 @@ def main():
                         st.text(services["display"].format_metrics(result["metrics"]))
                         
 if __name__ == "__main__":
+    import nltk
+    nltk.data.path.append("/tmp/nltk_data")
     main()
