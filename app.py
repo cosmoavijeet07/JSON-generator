@@ -1,3 +1,28 @@
+import nltk
+import ssl
+
+# Fix SSL certificate issues with NLTK downloads
+try:
+    _create_unverified_https_context = ssl._create_unverified_context
+except AttributeError:
+    pass
+else:
+    ssl._create_default_https_context = _create_unverified_https_context
+
+# Download required NLTK data at startup
+def download_nltk_data():
+    """Download required NLTK data packages"""
+    packages = ['punkt', 'punkt_tab', 'stopwords', 'averaged_perceptron_tagger']
+    for package in packages:
+        try:
+            nltk.download(package, quiet=True)
+        except:
+            pass
+
+# Call this before initializing services
+download_nltk_data()
+
+
 import streamlit as st
 import json
 import os
