@@ -196,7 +196,7 @@ def main():
                 session_id = services["session_manager"].create_session({
                     "model": model,
                     "pipeline": pipeline_type,
-                    "timestamp": str(Path.ctime(Path.cwd()))
+                    "timestamp": str(os.path.getctime(Path.cwd()))
                 })
                 
                 services["logger"].start_session(session_id)
