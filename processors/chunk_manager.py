@@ -1,148 +1,201 @@
-# ============================
-# FILE: processors/text_processor.py (FIXED)
-# ============================
 import re
-from typing import Dict, Any, List, Optional
+from typing import List, Dict, Any, Optional
+import hashlib
 
-class TextProcessor:
+class ChunkManager:
     def __init__(self):
-        # Initialize attributes first
-        self.nlp = None
+        self.default_chunk_size = 2000
+        self.overlap_size = 200
         self.nltk_available = False
-        self.sent_tokenize = lambda text: text.split('. ')
-        self.word_tokenize = lambda text: text.split()
+        self.sent_tokenize = lambda text: re.split(r'(?<=[.!?])\s+', text)
         
-        # Try to setup NLTK
+        # Initialize tokenization
         try:
             import nltk
-            # Download required NLTK data
             try:
                 nltk.download('punkt', quiet=True)
                 nltk.download('punkt_tab', quiet=True)
             except:
                 pass
             
-            # Try to import tokenizers
             try:
-                from nltk.tokenize import sent_tokenize, word_tokenize
+                from nltk.tokenize import sent_tokenize
                 self.sent_tokenize = sent_tokenize
-                self.word_tokenize = word_tokenize
                 self.nltk_available = True
             except:
                 pass
         except ImportError:
             pass
-        
-        # Try to load spacy
-        try:
-            import spacy
-            try:
-                self.nlp = spacy.load("en_core_web_sm")
-            except OSError:
-                # Model not installed, try to download it
-                try:
-                    import subprocess
-                    subprocess.run(["python", "-m", "spacy", "download", "en_core_web_sm"], 
-                                 capture_output=True, text=True)
-                    self.nlp = spacy.load("en_core_web_sm")
-                except:
-                    self.nlp = None
-        except ImportError:
-            self.nlp = None
     
-    def analyze_document(self, text: str) -> Dict[str, Any]:
-        """Analyze document structure and content"""
-        analysis = {
-            "total_length": len(text),
-            "num_words": len(self.word_tokenize(text)),
-            "num_sentences": len(self.sent_tokenize(text)),
-            "sections": self._identify_sections(text),
-            "entities": self._extract_entities(text) if self.nlp else [],
-            "structure_type": self._identify_structure_type(text),
-            "recommended_chunk_size": self._recommend_chunk_size(text)
-        }
+    def chunk_text(self, 
+                  text: str, 
+                  method: str = "semantic",
+                  chunk_size: Optional[int] = None,
+                  overlap: Optional[int] = None) -> List[Dict[str, Any]]:
+        """Chunk text using specified method"""
         
-        return analysis
+        chunk_size = chunk_size or self.default_chunk_size
+        overlap = overlap or self.overlap_size
+        
+        if method == "semantic":
+            return self._semantic_chunking(text, chunk_size, overlap)
+        elif method == "sentence":
+            return self._sentence_chunking(text, chunk_size, overlap)
+        elif method == "paragraph":
+            return self._paragraph_chunking(text, chunk_size, overlap)
+        elif method == "fixed":
+            return self._fixed_chunking(text, chunk_size, overlap)
+        else:
+            return self._semantic_chunking(text, chunk_size, overlap)
     
-    def _identify_sections(self, text: str) -> List[Dict[str, Any]]:
-        """Identify document sections"""
-        sections = []
-        lines = text.split('\n')
+    def _semantic_chunking(self, text: str, chunk_size: int, overlap: int) -> List[Dict[str, Any]]:
+        """Chunk based on semantic boundaries"""
+        chunks = []
+        paragraphs = text.split('\n\n')
         
-        for i, line in enumerate(lines):
-            line = line.strip()
-            if not line:
-                continue
-            
-            # Heuristics for section detection
-            if (len(line) < 100 and 
-                (line.isupper() or 
-                 re.match(r'^\d+\.?\s+\w+', line) or
-                 re.match(r'^[A-Z][^.!?]*$', line))):
+        current_chunk = ""
+        current_start = 0
+        
+        for para in paragraphs:
+            if len(current_chunk) + len(para) < chunk_size:
+                current_chunk += para + "\n\n"
+            else:
+                if current_chunk:
+                    chunks.append(self._create_chunk_dict(
+                        current_chunk.strip(),
+                        current_start,
+                        current_start + len(current_chunk),
+                        len(chunks)
+                    ))
                 
-                sections.append({
-                    "line_number": i,
-                    "title": line,
-                    "start_position": sum(len(l) + 1 for l in lines[:i])
-                })
+                current_start = current_start + len(current_chunk) - overlap
+                
+                if chunks and overlap > 0:
+                    overlap_text = current_chunk[-overlap:] if len(current_chunk) > overlap else current_chunk
+                    current_chunk = overlap_text + para + "\n\n"
+                else:
+                    current_chunk = para + "\n\n"
         
-        return sections
+        if current_chunk.strip():
+            chunks.append(self._create_chunk_dict(
+                current_chunk.strip(),
+                current_start,
+                len(text),
+                len(chunks)
+            ))
+        
+        return chunks
     
-    def _extract_entities(self, text: str) -> List[Dict[str, str]]:
-        """Extract named entities"""
-        if not self.nlp:
-            return []
-        
+    def _sentence_chunking(self, text: str, chunk_size: int, overlap: int) -> List[Dict[str, Any]]:
+        """Chunk based on sentence boundaries"""
         try:
-            # Process only first 1M characters for performance
-            doc = self.nlp(text[:1000000])
-            entities = []
-            
-            for ent in doc.ents:
-                entities.append({
-                    "text": ent.text,
-                    "type": ent.label_,
-                    "start": ent.start_char,
-                    "end": ent.end_char
-                })
-            
-            return entities
+            sentences = self.sent_tokenize(text)
         except:
-            return []
-    
-    def _identify_structure_type(self, text: str) -> str:
-        """Identify document structure type"""
-        if re.search(r'\{[\s\S]*\}', text):
-            return "json_like"
-        elif re.search(r'<[^>]+>', text):
-            return "xml_like"
-        elif re.search(r'\|.*\|.*\|', text):
-            return "table_like"
-        elif len(re.findall(r'\n\d+\.', text)) > 3:
-            return "numbered_list"
-        elif len(re.findall(r'\n[-*]', text)) > 3:
-            return "bullet_list"
-        else:
-            return "prose"
-    
-    def _recommend_chunk_size(self, text: str) -> int:
-        """Recommend optimal chunk size"""
-        doc_length = len(text)
+            # Fallback to simple splitting
+            sentences = re.split(r'(?<=[.!?])\s+', text)
         
-        if doc_length < 5000:
-            return doc_length
-        elif doc_length < 20000:
-            return 2000
-        elif doc_length < 100000:
-            return 5000
-        else:
-            return 10000
-    
-    def preprocess_text(self, text: str) -> str:
-        """Preprocess text for extraction"""
-        text = re.sub(r'\s+', ' ', text)
-        text = text.replace('"', '"').replace('"', '"')
-        text = text.replace(''', "'").replace(''', "'")
-        text = ''.join(char for char in text if ord(char) >= 32 or char == '\n')
+        chunks = []
+        current_chunk = ""
+        current_start = 0
         
-        return text.strip()
+        for sentence in sentences:
+            if len(current_chunk) + len(sentence) < chunk_size:
+                current_chunk += sentence + " "
+            else:
+                if current_chunk:
+                    chunks.append(self._create_chunk_dict(
+                        current_chunk.strip(),
+                        current_start,
+                        current_start + len(current_chunk),
+                        len(chunks)
+                    ))
+                
+                current_start = current_start + len(current_chunk) - overlap
+                
+                if chunks and overlap > 0:
+                    overlap_sentences = current_chunk.split('.')[-3:]
+                    overlap_text = '.'.join(overlap_sentences)
+                    current_chunk = overlap_text + sentence + " "
+                else:
+                    current_chunk = sentence + " "
+        
+        if current_chunk.strip():
+            chunks.append(self._create_chunk_dict(
+                current_chunk.strip(),
+                current_start,
+                len(text),
+                len(chunks)
+            ))
+        
+        return chunks
+    
+    def _paragraph_chunking(self, text: str, chunk_size: int, overlap: int) -> List[Dict[str, Any]]:
+        """Chunk based on paragraph boundaries"""
+        paragraphs = text.split('\n\n')
+        
+        chunks = []
+        text_position = 0
+        
+        for i, para in enumerate(paragraphs):
+            if len(para) > chunk_size:
+                sub_chunks = self._fixed_chunking(para, chunk_size, overlap)
+                # Adjust positions for sub-chunks
+                for sub_chunk in sub_chunks:
+                    sub_chunk["start_idx"] += text_position
+                    sub_chunk["end_idx"] += text_position
+                    sub_chunk["chunk_id"] = len(chunks)
+                    chunks.append(sub_chunk)
+            else:
+                chunks.append(self._create_chunk_dict(
+                    para,
+                    text_position,
+                    text_position + len(para),
+                    len(chunks)
+                ))
+            
+            text_position += len(para) + 2  # Account for \n\n
+        
+        return chunks
+    
+    def _fixed_chunking(self, text: str, chunk_size: int, overlap: int) -> List[Dict[str, Any]]:
+        """Fixed-size chunking"""
+        chunks = []
+        
+        for i in range(0, len(text), chunk_size - overlap):
+            chunk_text = text[i:i + chunk_size]
+            
+            chunks.append(self._create_chunk_dict(
+                chunk_text,
+                i,
+                min(i + chunk_size, len(text)),
+                len(chunks)
+            ))
+            
+            if i + chunk_size >= len(text):
+                break
+        
+        return chunks
+    
+    def _create_chunk_dict(self, content: str, start_idx: int, end_idx: int, chunk_id: int) -> Dict[str, Any]:
+        """Create chunk dictionary with metadata"""
+        return {
+            "chunk_id": chunk_id,
+            "content": content,
+            "start_idx": start_idx,
+            "end_idx": end_idx,
+            "length": len(content),
+            "hash": hashlib.md5(content.encode()).hexdigest(),
+            "context": self._extract_context(content)
+        }
+    
+    def _extract_context(self, content: str) -> str:
+        """Extract brief context from chunk"""
+        first_sentence = content.split('.')[0] if '.' in content else content[:100]
+        return first_sentence[:200] if len(first_sentence) > 200 else first_sentence
+    
+    def merge_chunks(self, chunks: List[Dict[str, Any]]) -> str:
+        """Merge chunks back into text"""
+        sorted_chunks = sorted(chunks, key=lambda x: x["chunk_id"])
+        merged_text = "\n\n".join(chunk["content"] for chunk in sorted_chunks)
+        
+        return merged_text

@@ -22,6 +22,40 @@ def download_nltk_data():
 # Call this before initializing services
 download_nltk_data()
 
+import sys
+import os
+from pathlib import Path
+
+# Setup NLTK data directory
+import nltk
+nltk_data_dir = Path.home() / "nltk_data"
+nltk_data_dir.mkdir(exist_ok=True)
+nltk.data.path.append(str(nltk_data_dir))
+
+# Download required NLTK data at startup
+def initialize_nltk():
+    """Initialize NLTK with required data packages"""
+    import ssl
+    try:
+        _create_unverified_https_context = ssl._create_unverified_context
+    except AttributeError:
+        pass
+    else:
+        ssl._create_default_https_context = _create_unverified_https_context
+    
+    packages = ['punkt', 'punkt_tab', 'stopwords', 'averaged_perceptron_tagger']
+    for package in packages:
+        try:
+            nltk.data.find(f'tokenizers/{package}')
+        except LookupError:
+            try:
+                nltk.download(package, quiet=True, download_dir=str(nltk_data_dir))
+            except:
+                pass
+
+# Initialize NLTK before anything else
+initialize_nltk()
+
 
 import streamlit as st
 import json
