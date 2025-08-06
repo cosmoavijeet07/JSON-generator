@@ -9,8 +9,8 @@ class TextProcessor:
         def __init__(self):
             try:
             # Set NLTK download path for Streamlit-safe temp directory
-                nltk.data.path.append("/tmp/nltk_data")
-                nltk.download("punkt_tab", download_dir="/tmp/nltk_data", quiet=True)
+                # nltk.data.path.append("/tmp/nltk_data")
+                nltk.download("all")
 
                 self.nlp = spacy.load("en_core_web_sm")
             except Exception as e:
