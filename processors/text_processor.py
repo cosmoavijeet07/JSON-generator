@@ -8,7 +8,7 @@ class TextProcessor:
     class TextProcessor:
         def __init__(self):
             try:
-                # Ensure nltk punkt tokenizer is downloaded to correct path
+            # Set NLTK download path for Streamlit-safe temp directory
                 nltk.data.path.append("/tmp/nltk_data")
                 nltk.download("punkt", download_dir="/tmp/nltk_data", quiet=True)
 
