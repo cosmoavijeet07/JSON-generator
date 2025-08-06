@@ -1,28 +1,41 @@
 import re
 from typing import Dict, Any, List, Optional
 import nltk
-from nltk.tokenize import sent_tokenize, word_tokenize
-import spacy
 
 class TextProcessor:
-    class TextProcessor:
-        def __init__(self):
-            try:
-            # Set NLTK download path for Streamlit-safe temp directory
-                # nltk.data.path.append("/tmp/nltk_data")
-                nltk.download()
-
-                self.nlp = spacy.load("en_core_web_sm")
-            except Exception as e:
-                print(f"[TextProcessor Init Error] {e}")
-                self.nlp = None
+    def __init__(self):
+        # Download required NLTK data
+        try:
+            nltk.download('punkt', quiet=True)
+            nltk.download('punkt_tab', quiet=True)  # Add this for newer NLTK versions
+        except:
+            pass
+        
+        # Try to import after downloading
+        try:
+            from nltk.tokenize import sent_tokenize, word_tokenize
+            self.sent_tokenize = sent_tokenize
+            self.word_tokenize = word_tokenize
+            self.nltk_available = True
+        except:
+            # Fallback tokenization if NLTK fails
+            self.nltk_available = False
+            self.sent_tokenize = lambda text: text.split('. ')
+            self.word_tokenize = lambda text: text.split()
+        
+        # Try to load spacy
+        try:
+            import spacy
+            self.nlp = spacy.load("en_core_web_sm")
+        except:
+            self.nlp = None
     
     def analyze_document(self, text: str) -> Dict[str, Any]:
         """Analyze document structure and content"""
         analysis = {
             "total_length": len(text),
-            "num_words": len(word_tokenize(text)),
-            "num_sentences": len(sent_tokenize(text)),
+            "num_words": len(self.word_tokenize(text)),
+            "num_sentences": len(self.sent_tokenize(text)),
             "sections": self._identify_sections(text),
             "entities": self._extract_entities(text) if self.nlp else [],
             "structure_type": self._identify_structure_type(text),
@@ -34,8 +47,6 @@ class TextProcessor:
     def _identify_sections(self, text: str) -> List[Dict[str, Any]]:
         """Identify document sections"""
         sections = []
-        
-        # Look for headers (lines that are shorter and possibly capitalized)
         lines = text.split('\n')
         
         for i, line in enumerate(lines):
@@ -47,7 +58,7 @@ class TextProcessor:
             if (len(line) < 100 and 
                 (line.isupper() or 
                  re.match(r'^\d+\.?\s+\w+', line) or
-                 re.match(r'^[A-Z][^.!?]*', line))):
+                 re.match(r'^[A-Z][^.!?]*$', line))):
                 
                 sections.append({
                     "line_number": i,
@@ -77,7 +88,6 @@ class TextProcessor:
     
     def _identify_structure_type(self, text: str) -> str:
         """Identify document structure type"""
-        # Simple heuristics
         if re.search(r'\{[\s\S]*\}', text):
             return "json_like"
         elif re.search(r'<[^>]+>', text):
@@ -96,7 +106,7 @@ class TextProcessor:
         doc_length = len(text)
         
         if doc_length < 5000:
-            return doc_length  # No chunking needed
+            return doc_length
         elif doc_length < 20000:
             return 2000
         elif doc_length < 100000:
@@ -106,14 +116,9 @@ class TextProcessor:
     
     def preprocess_text(self, text: str) -> str:
         """Preprocess text for extraction"""
-        # Remove excessive whitespace
         text = re.sub(r'\s+', ' ', text)
-        
-        # Fix common encoding issues
         text = text.replace('"', '"').replace('"', '"')
         text = text.replace(''', "'").replace(''', "'")
-        
-        # Remove control characters
         text = ''.join(char for char in text if ord(char) >= 32 or char == '\n')
         
         return text.strip()

@@ -6,6 +6,19 @@ class ChunkManager:
     def __init__(self):
         self.default_chunk_size = 2000
         self.overlap_size = 200
+        
+        # Initialize tokenization
+        try:
+            import nltk
+            nltk.download('punkt', quiet=True)
+            nltk.download('punkt_tab', quiet=True)
+            from nltk.tokenize import sent_tokenize
+            self.sent_tokenize = sent_tokenize
+            self.nltk_available = True
+        except:
+            # Fallback sentence splitting
+            self.nltk_available = False
+            self.sent_tokenize = lambda text: re.split(r'(?<=[.!?])\s+', text)
     
     def chunk_text(self, 
                   text: str, 
@@ -31,8 +44,6 @@ class ChunkManager:
     def _semantic_chunking(self, text: str, chunk_size: int, overlap: int) -> List[Dict[str, Any]]:
         """Chunk based on semantic boundaries"""
         chunks = []
-        
-        # Split by paragraphs first
         paragraphs = text.split('\n\n')
         
         current_chunk = ""
@@ -52,14 +63,12 @@ class ChunkManager:
                 
                 current_start = current_start + len(current_chunk) - overlap
                 
-                # Include overlap from previous chunk
                 if chunks and overlap > 0:
                     overlap_text = current_chunk[-overlap:] if len(current_chunk) > overlap else current_chunk
                     current_chunk = overlap_text + para + "\n\n"
                 else:
                     current_chunk = para + "\n\n"
         
-        # Add remaining chunk
         if current_chunk.strip():
             chunks.append(self._create_chunk_dict(
                 current_chunk.strip(),
@@ -72,8 +81,7 @@ class ChunkManager:
     
     def _sentence_chunking(self, text: str, chunk_size: int, overlap: int) -> List[Dict[str, Any]]:
         """Chunk based on sentence boundaries"""
-        # Simple sentence splitting (can be improved with NLTK)
-        sentences = re.split(r'(?<=[.!?])\s+', text)
+        sentences = self.sent_tokenize(text)
         
         chunks = []
         current_chunk = ""
@@ -93,16 +101,13 @@ class ChunkManager:
                 
                 current_start = current_start + len(current_chunk) - overlap
                 
-                # Include overlap
                 if chunks and overlap > 0:
-                    # Get last few sentences for overlap
                     overlap_sentences = current_chunk.split('.')[-3:]
                     overlap_text = '.'.join(overlap_sentences)
                     current_chunk = overlap_text + sentence + " "
                 else:
                     current_chunk = sentence + " "
         
-        # Add remaining chunk
         if current_chunk.strip():
             chunks.append(self._create_chunk_dict(
                 current_chunk.strip(),
@@ -120,14 +125,14 @@ class ChunkManager:
         chunks = []
         for i, para in enumerate(paragraphs):
             if len(para) > chunk_size:
-                # Split large paragraphs
                 sub_chunks = self._fixed_chunking(para, chunk_size, overlap)
                 chunks.extend(sub_chunks)
             else:
+                start_idx = text.find(para)
                 chunks.append(self._create_chunk_dict(
                     para,
-                    text.index(para),
-                    text.index(para) + len(para),
+                    start_idx,
+                    start_idx + len(para),
                     len(chunks)
                 ))
         
@@ -166,16 +171,12 @@ class ChunkManager:
     
     def _extract_context(self, content: str) -> str:
         """Extract brief context from chunk"""
-        # Get first sentence or first 100 characters
         first_sentence = content.split('.')[0] if '.' in content else content[:100]
         return first_sentence[:200] if len(first_sentence) > 200 else first_sentence
     
     def merge_chunks(self, chunks: List[Dict[str, Any]]) -> str:
         """Merge chunks back into text"""
-        # Sort chunks by chunk_id to maintain order
         sorted_chunks = sorted(chunks, key=lambda x: x["chunk_id"])
-        
-        # Simple merge (can be improved to handle overlaps)
         merged_text = "\n\n".join(chunk["content"] for chunk in sorted_chunks)
         
         return merged_text
