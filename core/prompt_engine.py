@@ -1,187 +1,331 @@
 import json
-from typing import Dict, Any, Optional, List
+from typing import Dict, List, Any, Optional
 
-class PromptEngine:
-    def __init__(self):
-        self.templates = {
-            "extraction": self._extraction_template,
-            "analysis": self._analysis_template,
-            "chunking": self._chunking_template,
-            "validation": self._validation_template,
-            "merge": self._merge_template
+def create_prompt(schema: str, text: str, error: str = None):
+    """
+    Original simple prompt creation for backward compatibility
+    """
+    # Examples: multiple nested schemas
+    examples = [
+        {
+            "schema": {
+                "title": "AuthorInfo",
+                "type": "object",
+                "properties": {
+                    "name": {"type": "string"},
+                    "age": {"type": "integer"},
+                    "email": {"type": "string"},
+                    "affiliation": {
+                        "type": "object",
+                        "properties": {
+                            "organization": {"type": "string"},
+                            "country": {"type": "string"}
+                        },
+                        "required": ["organization"]
+                    }
+                },
+                "required": ["name", "email", "affiliation"]
+            },
+            "text": "Dr. Jane Smith is a professor at Stanford University in the US. You can reach her at jane@stanford.edu.",
+            "output": {
+                "name": "Dr. Jane Smith",
+                "email": "jane@stanford.edu",
+                "affiliation": {
+                    "organization": "Stanford University",
+                    "country": "US"
+                }
+            }
         }
+    ]
     
-    def create_prompt(self, 
-                     template_type: str,
-                     schema: Optional[str] = None,
-                     text: Optional[str] = None,
-                     error: Optional[str] = None,
-                     context: Optional[Dict[str, Any]] = None) -> str:
-        """Create prompt based on template type"""
-        
-        template_func = self.templates.get(template_type, self._extraction_template)
-        return template_func(schema, text, error, context)
+    example_section = ""
+    for idx, ex in enumerate(examples, 1):
+        example_section += f"""
+Example {idx}:
+Schema:
+{json.dumps(ex['schema'], indent=2)}
+
+Text:
+{ex['text']}
+
+Output:
+{json.dumps(ex['output'], indent=2)}
+"""
     
-    def _extraction_template(self, schema: str, text: str, error: Optional[str], context: Optional[Dict[str, Any]]) -> str:
-        """Template for JSON extraction"""
-        
-        examples = self._get_few_shot_examples(schema)
-        error_section = f"\n⚠️ Previous attempt failed with error: {error}\nPlease fix the issue.\n" if error else ""
-        
-        prompt = f"""You are an expert at extracting structured data from unstructured text.
-
-Your task is to extract information from the provided text and format it according to the JSON schema.
-
-{error_section}
+    # Optional error loop section
+    error_text = f"""
+⚠️ Note: The previous output failed validation:
+{error}
+Please fix field mismatches or types as per schema.
+""" if error else ""
+    
+    # Prompt core
+    prompt = f"""
+You are a structured data extraction assistant. Your job is to extract
+a valid JSON object from raw text using the provided JSON schema.
 
 Instructions:
-1. Extract ONLY information present in the text
-2. Do NOT invent or hallucinate any data
-3. Follow the schema structure exactly
-4. Use null for missing required fields
-5. Omit optional fields if not present in text
-6. Ensure all data types match the schema
+- Output only the final JSON (no explanations).
+- Match the field names, types, and nesting exactly as defined in the schema.
+- Ensure capturing maximum detail from the text.
+- If a field is missing in the text, leave it as `null` or an empty array/object.
+- If a field is optional and not present in the text, do not include it in the output.
+- Do not invent values; omit missing optional fields.
+- Ensure all required fields are present with correct types.
+- If arrays or nested objects are specified, populate them correctly.
 
-{examples}
+{error_text}
 
-=== SCHEMA ===
+=== INPUT SCHEMA ===
 {schema}
+=== END SCHEMA ===
 
-=== TEXT ===
+=== INPUT TEXT ===
 {text}
+=== END TEXT ===
 
-=== OUTPUT ===
-Provide only the extracted JSON object without any explanation:
+{example_section}
+
+🟢 Now, generate the JSON output that exactly follows the schema using
+the input text above.
+Only respond with the raw JSON object.
 """
-        return prompt
     
-    def _analysis_template(self, schema: str, text: str, error: Optional[str], context: Optional[Dict[str, Any]]) -> str:
-        """Template for document analysis"""
-        
-        prompt = f"""Analyze the following document to understand its semantic structure and content organization.
+    return prompt.strip()
 
-=== DOCUMENT ===
-{text[:5000]}... (truncated for analysis)
 
-=== TASK ===
-1. Identify the main sections and structure
-2. Determine logical boundaries for chunking
-3. Find key entities and relationships
-4. Suggest optimal chunking strategy
-
-Provide your analysis in the following format:
-{{
-    "document_type": "type of document",
-    "main_sections": ["list", "of", "sections"],
-    "suggested_chunk_size": "number of tokens",
-    "chunk_boundaries": ["list", "of", "boundary", "markers"],
-    "key_entities": ["list", "of", "entities"],
-    "semantic_structure": "description of structure"
-}}
+def create_adaptive_prompt(
+    schema: Dict,
+    text: str,
+    pass_number: int = 1,
+    previous_extractions: List[Dict] = None,
+    context: Dict[str, Any] = None
+) -> str:
+    """
+    Create an adaptive prompt for multi-pass extraction with context awareness
+    
+    Args:
+        schema: The JSON schema (partition) to extract
+        text: The text chunk to extract from
+        pass_number: Current pass number (1-5)
+        previous_extractions: Results from previous passes
+        context: Global context including embeddings and full documents
+    
+    Returns:
+        Adaptive prompt string for the LLM
+    """
+    
+    # Base instructions that evolve with each pass
+    pass_instructions = {
+        1: "Extract all clearly stated information matching the schema.",
+        2: "Refine the extraction by finding additional details and resolving ambiguities.",
+        3: "Deep extraction: infer relationships and fill gaps using contextual understanding.",
+        4: "Validate and enhance: ensure completeness and logical consistency.",
+        5: "Final polish: maximize extraction quality and handle edge cases."
+    }
+    
+    instruction = pass_instructions.get(pass_number, pass_instructions[1])
+    
+    # Build few-shot examples based on schema complexity
+    examples = _generate_adaptive_examples(schema)
+    
+    # Format previous extractions if available
+    previous_section = ""
+    if previous_extractions:
+        previous_section = "\n=== PREVIOUS EXTRACTION ATTEMPTS ===\n"
+        for prev in previous_extractions[-2:]:  # Show last 2 attempts
+            previous_section += f"""
+Pass {prev['pass']}:
+Valid: {prev.get('valid', False)}
+{f"Error: {prev.get('error', '')}" if 'error' in prev else ""}
+{f"Data: {json.dumps(prev.get('data', {}), indent=2)[:500]}..." if 'data' in prev else ""}
 """
-        return prompt
+        previous_section += "=== END PREVIOUS ATTEMPTS ===\n"
     
-    def _chunking_template(self, schema: str, text: str, error: Optional[str], context: Optional[Dict[str, Any]]) -> str:
-        """Template for intelligent chunking code generation"""
-        
-        analysis = context.get("analysis", {}) if context else {}
-        
-        prompt = f"""Generate Python code to intelligently chunk the following document based on the analysis.
-
-=== DOCUMENT ANALYSIS ===
-{json.dumps(analysis, indent=2)}
-
-=== REQUIREMENTS ===
-1. Preserve semantic coherence
-2. Maintain context across chunks
-3. Include overlap for continuity
-4. Respect natural boundaries
-
-Generate a Python function with this signature:
-```python
-def chunk_document(text: str, max_chunk_size: int = 2000) -> List[Dict[str, Any]]:
-    '''
-    Returns list of chunks with metadata:
-    [{{
-        "chunk_id": int,
-        "content": str,
-        "start_idx": int,
-        "end_idx": int,
-        "context": str  # Brief context summary
-    }}]
-    '''
-    # Your implementation here
-```
-
-Provide only the complete function code:
+    # Context awareness section
+    context_section = ""
+    if context:
+        context_section = """
+=== CONTEXT INFORMATION ===
+- Full document contains multiple related sections
+- Schema represents part of a larger structure
+- Maintain consistency with overall document semantics
+- Consider relationships between different data points
+=== END CONTEXT ===
 """
-        return prompt
     
-    def _validation_template(self, schema: str, text: str, error: Optional[str], context: Optional[Dict[str, Any]]) -> str:
-        """Template for validation and correction"""
-        
-        extracted_json = context.get("extracted_json", {}) if context else {}
-        
-        prompt = f"""Review and correct the extracted JSON to ensure it matches the schema and source text.
+    prompt = f"""
+You are an advanced JSON extraction specialist performing pass {pass_number} of a multi-pass extraction.
 
-=== SCHEMA ===
-{schema}
+CURRENT TASK: {instruction}
 
-=== EXTRACTED JSON ===
-{json.dumps(extracted_json, indent=2)}
+{context_section}
 
-=== VALIDATION ERROR ===
-{error}
+=== TARGET SCHEMA ===
+{json.dumps(schema, indent=2)}
+=== END SCHEMA ===
 
-=== ORIGINAL TEXT (excerpt) ===
+=== TEXT TO EXTRACT FROM ===
+{text[:3000]}{"..." if len(text) > 3000 else ""}
+=== END TEXT ===
+
+{previous_section}
+
+=== EXTRACTION GUIDELINES FOR PASS {pass_number} ===
+{"1. Focus on explicit information only." if pass_number == 1 else ""}
+{"2. Use context to resolve ambiguities from pass 1." if pass_number == 2 else ""}
+{"3. Make intelligent inferences based on document patterns." if pass_number == 3 else ""}
+{"4. Ensure all required fields have meaningful values." if pass_number == 4 else ""}
+{"5. Perfect the extraction with maximum accuracy." if pass_number == 5 else ""}
+
+- Match the schema structure exactly
+- Use null for genuinely missing required fields
+- Omit optional fields if no data available
+- Ensure type compliance (string, number, boolean, array, object)
+- NO hallucination - only extract what's supported by the text
+- For arrays, extract ALL relevant items, not just examples
+
+=== FEW-SHOT EXAMPLES ===
+{examples}
+=== END EXAMPLES ===
+
+Now, extract a JSON object that perfectly matches the schema from the given text.
+This is pass {pass_number} - {instruction}
+
+Return ONLY the JSON object, no explanations or markdown:
+"""
+    
+    return prompt.strip()
+
+
+def _generate_adaptive_examples(schema: Dict) -> str:
+    """Generate relevant few-shot examples based on schema structure"""
+    
+    examples = []
+    
+    # Detect schema patterns and provide relevant examples
+    if _has_nested_objects(schema):
+        examples.append({
+            "pattern": "Nested Objects",
+            "example_text": "John Smith, CEO of TechCorp (based in California), announced the merger.",
+            "example_output": {
+                "person": {
+                    "name": "John Smith",
+                    "title": "CEO",
+                    "company": {
+                        "name": "TechCorp",
+                        "location": "California"
+                    }
+                }
+            }
+        })
+    
+    if _has_arrays(schema):
+        examples.append({
+            "pattern": "Arrays",
+            "example_text": "The team includes Alice (engineer), Bob (designer), and Carol (manager).",
+            "example_output": {
+                "team": [
+                    {"name": "Alice", "role": "engineer"},
+                    {"name": "Bob", "role": "designer"},
+                    {"name": "Carol", "role": "manager"}
+                ]
+            }
+        })
+    
+    if _has_optional_fields(schema):
+        examples.append({
+            "pattern": "Optional Fields",
+            "example_text": "Product X costs $99. No discount available.",
+            "example_output": {
+                "product": "Product X",
+                "price": 99
+                # Note: 'discount' field omitted as it's optional and not mentioned
+            }
+        })
+    
+    # Format examples into string
+    example_str = ""
+    for ex in examples:
+        example_str += f"""
+Pattern: {ex['pattern']}
+Text: {ex['example_text']}
+Extracted: {json.dumps(ex['example_output'], indent=2)}
+---"""
+    
+    return example_str if example_str else "No specific examples needed for this schema structure."
+
+
+def _has_nested_objects(schema: Dict) -> bool:
+    """Check if schema has nested objects"""
+    if 'properties' in schema:
+        for prop in schema['properties'].values():
+            if prop.get('type') == 'object' and 'properties' in prop:
+                return True
+    return False
+
+
+def _has_arrays(schema: Dict) -> bool:
+    """Check if schema has array fields"""
+    if 'properties' in schema:
+        for prop in schema['properties'].values():
+            if prop.get('type') == 'array':
+                return True
+    return False
+
+
+def _has_optional_fields(schema: Dict) -> bool:
+    """Check if schema has optional fields"""
+    if 'properties' in schema and 'required' in schema:
+        return len(schema['properties']) > len(schema.get('required', []))
+    return False
+
+
+def create_cascade_prompt(
+    schema: Dict,
+    text: str,
+    field_focus: str = None,
+    extraction_depth: str = "standard"
+) -> str:
+    """
+    Create cascading prompts for specific field extraction
+    
+    Args:
+        schema: The JSON schema
+        text: The text to extract from
+        field_focus: Specific field to focus on (optional)
+        extraction_depth: "shallow", "standard", or "deep"
+    
+    Returns:
+        Specialized prompt for cascade extraction
+    """
+    
+    depth_instructions = {
+        "shallow": "Extract only explicitly stated values.",
+        "standard": "Extract stated values and obvious relationships.",
+        "deep": "Extract all information including inferred relationships and context."
+    }
+    
+    prompt = f"""
+Advanced Extraction Task - Depth: {extraction_depth.upper()}
+
+{depth_instructions.get(extraction_depth, depth_instructions["standard"])}
+
+{"FOCUS FIELD: " + field_focus if field_focus else "Extract all fields equally."}
+
+Schema:
+{json.dumps(schema, indent=2)}
+
+Text:
 {text[:2000]}...
 
-Fix the JSON to:
-1. Resolve all validation errors
-2. Ensure accuracy to source text
-3. Maintain schema compliance
+Instructions:
+1. {depth_instructions[extraction_depth]}
+2. Pay special attention to {field_focus if field_focus else "all required fields"}
+3. Ensure type correctness
+4. No hallucination - only what's supported by text
 
-Provide only the corrected JSON:
+Return ONLY the JSON object:
 """
-        return prompt
     
-    def _merge_template(self, schema: str, text: str, error: Optional[str], context: Optional[Dict[str, Any]]) -> str:
-        """Template for merging multiple JSON outputs"""
-        
-        outputs = context.get("outputs", []) if context else []
-        
-        prompt = f"""Intelligently merge the following JSON outputs into a single, coherent result.
-
-=== SCHEMA ===
-{schema}
-
-=== JSON OUTPUTS TO MERGE ===
-{json.dumps(outputs, indent=2)}
-
-=== MERGING RULES ===
-1. Avoid duplicates
-2. Prefer non-null values
-3. Combine arrays intelligently
-4. Resolve conflicts by preferring most complete data
-5. Maintain schema compliance
-
-Provide the merged JSON:
-"""
-        return prompt
-    
-    def _get_few_shot_examples(self, schema: str) -> str:
-        """Generate few-shot examples based on schema complexity"""
-        # This would ideally generate dynamic examples based on the schema
-        return """
-=== EXAMPLES ===
-
-Example 1:
-Schema: {"type": "object", "properties": {"name": {"type": "string"}, "age": {"type": "integer"}}}
-Text: "John Smith is 35 years old."
-Output: {"name": "John Smith", "age": 35}
-
-Example 2:
-Schema: {"type": "object", "properties": {"items": {"type": "array", "items": {"type": "string"}}}}
-Text: "The list includes apples, bananas, and oranges."
-Output: {"items": ["apples", "bananas", "oranges"]}
-"""
+    return prompt.strip()

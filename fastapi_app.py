@@ -3,7 +3,7 @@ from fastapi.responses import JSONResponse
 import os, json, asyncio
 
 from core import (
-    schema_validator,
+    schema_analyzer,
     prompt_engine,
     llm_interface,
     json_extractor,
@@ -38,7 +38,7 @@ async def extract_json_api(
         return JSONResponse(status_code=400, content={"error": f"Invalid JSON schema: {e}"})
     
     # Validate schema
-    valid, err = schema_validator.is_valid_schema(schema_json)
+    valid, err = schema_analyzer.is_valid_schema(schema_json)
     if not valid:
         return JSONResponse(status_code=400, content={"error": f"Schema validation failed: {err}"})
     
