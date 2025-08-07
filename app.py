@@ -1,4 +1,4 @@
-from core import schema_analyzer
+from core import schema_analyze
 import streamlit as st
 import os
 import json
@@ -13,10 +13,10 @@ from core import (
     session_manager,
     token_estimator,
     text_analyzer,
-    schema_analyzer,
     extraction_engine,
     merger_engine,
-    embedding_manager
+    embedding_manager,
+    schema_analyzer
 )
 
 load_dotenv()
@@ -166,7 +166,7 @@ if st.session_state.pipeline_choice:
             progress_bar.progress(10)
             
             # Validate schema
-            is_valid, error = schema_analyzer.is_valid_schema(schema_json)
+            is_valid, error = schema_analyze.is_valid_schema(schema_json)
             if not is_valid:
                 st.error(f"Schema validation failed: {error}")
                 st.stop()
@@ -301,7 +301,7 @@ if st.session_state.pipeline_choice:
             log_and_display("Analyzing JSON schema complexity...")
             
             # Validate schema
-            is_valid, error = schema_analyzer.is_valid_schema(schema_json)
+            is_valid, error = schema_analyze.is_valid_schema(schema_json)
             if not is_valid:
                 st.error(f"Schema validation failed: {error}")
                 st.stop()
