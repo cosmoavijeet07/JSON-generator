@@ -229,6 +229,12 @@ if st.session_state.pipeline_choice:
                     )
             else:
                 st.error("❌ Failed to extract valid JSON after 3 attempts")
+                log_data = "\n".join(st.session_state.logs)
+                st.download_button(
+                                        "📄 Download Logs",
+                                        data=log_data,
+                                        file_name=f"{st.session_state.session_id}_log.txt",
+                                        mime="text/plain")
     
     else:
         # === EXTENSIVE PIPELINE ===
@@ -523,6 +529,12 @@ if st.session_state.pipeline_choice:
                                 )
                         else:
                             st.error(f"❌ Unable to fix validation errors: {error}")
+                            log_data = "\n".join(st.session_state.logs)
+                            st.download_button(
+                                        "📄 Download Logs",
+                                        data=log_data,
+                                        file_name=f"{st.session_state.session_id}_log.txt",
+                                        mime="text/plain")
 
 # === Log Display ===
 if st.session_state.logs:
