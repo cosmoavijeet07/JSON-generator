@@ -61,8 +61,8 @@ class MergerEngine:
                 partition_merges, target_schema
             )
         
-        # Ensure schema compliance
-        final_merge = self._ensure_schema_compliance_programmatic(
+        # CRITICAL: Ensure strict schema compliance
+        final_merge = self._ensure_strict_schema_compliance(
             final_merge, target_schema
         )
         
@@ -247,35 +247,70 @@ class MergerEngine:
         
         return merged
     
-    def _ensure_schema_compliance_programmatic(self, data: Dict, schema: Dict) -> Dict:
-        """Ensure data complies with schema programmatically"""
+    def _ensure_strict_schema_compliance(self, data: Dict, schema: Dict) -> Dict:
+        """
+        Ensure data strictly complies with schema, removing any additional properties
+        This is the critical fix for the additionalProperties error
+        """
         
-        if not schema or schema.get('type') != 'object':
+        if not schema or not isinstance(data, dict):
             return data
         
-        compliant = {}
-        properties = schema.get('properties', {})
-        required = schema.get('required', [])
+        schema_type = schema.get('type', 'object')
         
-        # Process defined properties
-        for prop_name, prop_schema in properties.items():
-            if prop_name in data:
-                # Validate and clean the value
-                compliant[prop_name] = self._validate_and_clean(
-                    data[prop_name], prop_schema
-                )
-            elif prop_name in required:
-                # Add required field with default value
-                compliant[prop_name] = self._get_default_value(prop_schema)
+        if schema_type == 'object':
+            compliant = {}
+            properties = schema.get('properties', {})
+            required = schema.get('required', [])
+            additional_properties = schema.get('additionalProperties', True)
+            
+            # Process only defined properties
+            for prop_name, prop_schema in properties.items():
+                if prop_name in data:
+                    # Recursively ensure compliance for nested structures
+                    compliant[prop_name] = self._ensure_strict_schema_compliance(
+                        data[prop_name], prop_schema
+                    )
+                elif prop_name in required:
+                    # Add required field with default value
+                    compliant[prop_name] = self._get_default_value(prop_schema)
+            
+            # Handle additionalProperties
+            if additional_properties == True:
+                # Allow additional properties
+                for key, value in data.items():
+                    if key not in properties:
+                        compliant[key] = value
+            elif additional_properties == False:
+                # Strict mode: DO NOT add any properties not in schema
+                # This is the key fix - we simply don't copy undefined properties
+                pass
+            elif isinstance(additional_properties, dict):
+                # Additional properties must match a specific schema
+                for key, value in data.items():
+                    if key not in properties:
+                        compliant[key] = self._ensure_strict_schema_compliance(
+                            value, additional_properties
+                        )
+            
+            return compliant
         
-        # Handle additionalProperties
-        if schema.get('additionalProperties', True):
-            # Add any extra properties from data
-            for key, value in data.items():
-                if key not in compliant:
-                    compliant[key] = value
+        elif schema_type == 'array':
+            if not isinstance(data, list):
+                return []
+            
+            items_schema = schema.get('items', {})
+            if items_schema:
+                # Ensure each item complies with the items schema
+                return [
+                    self._ensure_strict_schema_compliance(item, items_schema)
+                    for item in data
+                ]
+            return data
         
-        return compliant
+        else:
+            # For scalar types, validate and clean
+            return self._validate_and_clean(data, schema)
     
     def _validate_and_clean(self, value: Any, schema: Dict) -> Any:
         """Validate and clean a value according to schema"""
@@ -299,7 +334,7 @@ class MergerEngine:
                     # Validate array items if schema provided
                     if 'items' in schema:
                         return [
-                            self._validate_and_clean(item, schema['items'])
+                            self._ensure_strict_schema_compliance(item, schema['items'])
                             for item in value
                         ]
                     return value
@@ -307,11 +342,7 @@ class MergerEngine:
             elif expected_type == 'object':
                 if isinstance(value, dict):
                     # Recursively validate object
-                    if 'properties' in schema:
-                        return self._ensure_schema_compliance_programmatic(
-                            value, schema
-                        )
-                    return value
+                    return self._ensure_strict_schema_compliance(value, schema)
                 return {}
             elif expected_type == 'null':
                 return None
@@ -327,14 +358,17 @@ class MergerEngine:
         # Remove null values for optional fields
         cleaned = {}
         required = schema.get('required', [])
+        properties = schema.get('properties', {})
         
         for key, value in data.items():
-            # Keep required fields even if null
-            if key in required:
-                cleaned[key] = value
-            # Remove optional fields if they're null or empty
-            elif value is not None and value != "" and value != [] and value != {}:
-                cleaned[key] = value
+            # Only include fields that are in the schema properties
+            if key in properties:
+                # Keep required fields even if null
+                if key in required:
+                    cleaned[key] = value
+                # Remove optional fields if they're null or empty
+                elif value is not None and value != "" and value != [] and value != {}:
+                    cleaned[key] = value
         
         # Ensure consistency in related fields
         cleaned = self._ensure_field_consistency(cleaned, schema)
@@ -367,6 +401,13 @@ class MergerEngine:
                     pass
         
         return data
+    
+    def enforce_schema_compliance(self, data: Dict, schema: Dict) -> Dict:
+        """
+        Public method to enforce strict schema compliance
+        This can be called externally to ensure data matches schema exactly
+        """
+        return self._ensure_strict_schema_compliance(data, schema)
 
 # Initialize global instance
 merger_engine = MergerEngine()
