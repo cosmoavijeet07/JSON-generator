@@ -1,13 +1,20 @@
 import json
 import re
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List, Optional, Tuple
 from .llm_interface import call_llm
 from .json_extractor import extract_json, validate_against_schema
 from .prompt_engine import create_adaptive_prompt
 from .logger_service import log
+from .token_estimator import estimate_tokens
+from .embedding_manager import embedding_manager
 
 class ExtractionEngine:
-    """Handles multi-pass extraction with context awareness"""
+    """Handles multi-pass extraction with context awareness and token management"""
+    
+    def __init__(self):
+        self.max_context_tokens = 8000  # Safe limit for most models
+        self.max_output_tokens = 2000   # Expected output size
+        self.embedding_manager = embedding_manager
     
     def multi_pass_extract(
         self, 
@@ -18,31 +25,62 @@ class ExtractionEngine:
         context: Dict[str, Any]
     ) -> Optional[Dict]:
         """
-        Perform multi-pass extraction on a text chunk with a schema partition
+        Perform multi-pass extraction with intelligent token management
         
         Args:
             text_chunk: The text chunk to extract from
             schema_partition: The schema partition to extract
             num_passes: Number of extraction passes (2-5)
             model: The LLM model to use
-            context: Global context including embeddings and full documents
+            context: Global context including embeddings
         
         Returns:
-            Extracted JSON matching the schema partition, or None if extraction fails
+            Extracted JSON matching the schema partition
         """
+        
+        # Estimate tokens and adjust if needed
+        text_tokens = estimate_tokens(text_chunk, model)
+        schema_tokens = estimate_tokens(json.dumps(schema_partition), model)
+        
+        # Truncate text if needed to fit in context window
+        if text_tokens + schema_tokens > self.max_context_tokens - 1000:  # Leave room for prompt
+            max_text_tokens = self.max_context_tokens - schema_tokens - 1000
+            text_chunk = self._truncate_to_tokens(text_chunk, max_text_tokens, model)
+            log("session", "text_truncated", f"Text truncated to {max_text_tokens} tokens", "WARNING")
+        
+        # Check if this is a single extraction (optimization)
+        is_single_extraction = (
+            context.get('total_chunks', 1) == 1 and 
+            context.get('total_partitions', 1) == 1
+        )
+        
+        if is_single_extraction:
+            log("session", "optimized_extraction", "Using optimized single extraction", "INFO")
+            # For single extraction, we can use fewer passes
+            num_passes = min(num_passes, 2)
         
         extracted_data = None
         previous_extractions = []
         
         for pass_num in range(1, num_passes + 1):
-            # Create adaptive prompt for this pass
+            # Use embeddings for context instead of full text
+            context_summary = self._create_context_summary(text_chunk, schema_partition, context)
+            
+            # Create adaptive prompt with token awareness
             prompt = create_adaptive_prompt(
                 schema_partition,
                 text_chunk,
                 pass_number=pass_num,
-                previous_extractions=previous_extractions,
-                context=context
+                previous_extractions=previous_extractions[-2:] if previous_extractions else None,  # Only last 2
+                context=context_summary
             )
+            
+            # Check prompt tokens
+            prompt_tokens = estimate_tokens(prompt, model)
+            if prompt_tokens > self.max_context_tokens:
+                log("session", "prompt_too_long", f"Prompt exceeds token limit: {prompt_tokens}", "WARNING")
+                # Reduce prompt size
+                prompt = self._reduce_prompt_size(prompt, schema_partition, text_chunk, pass_num)
             
             try:
                 # Call LLM for extraction
@@ -62,182 +100,163 @@ class ExtractionEngine:
                         'valid': True
                     })
                     
-                    # If we have a valid extraction and it's not the last pass,
-                    # continue to refine in next passes
-                    if pass_num < num_passes:
-                        continue
-                    else:
+                    # Early exit if we have good extraction
+                    if is_single_extraction and is_valid:
+                        log("session", "early_exit", f"Valid extraction achieved in pass {pass_num}", "INFO")
+                        break
+                    elif pass_num >= 2 and is_valid:
                         break
                 else:
-                    # Store invalid extraction for learning
                     previous_extractions.append({
                         'pass': pass_num,
                         'data': current_extraction,
                         'valid': False,
-                        'error': error
+                        'error': error[:200]  # Limit error message size
                     })
                     
-                    # If this is the last pass and we still don't have valid data,
-                    # try to fix the extraction
+                    # Try to fix on last pass
                     if pass_num == num_passes:
                         extracted_data = self._attempt_fix(
                             current_extraction, 
                             schema_partition, 
                             error, 
-                            text_chunk,
+                            text_chunk[:1000],  # Use only sample for fix
                             model
                         )
             
             except Exception as e:
-                print(f"Error in pass {pass_num}: {e}")
+                log("session", f"extraction_error_pass_{pass_num}", str(e), "ERROR")
                 previous_extractions.append({
                     'pass': pass_num,
-                    'error': str(e),
+                    'error': str(e)[:200],
                     'valid': False
                 })
         
-        # If we have extracted data, enhance it with context
-        if extracted_data:
-            extracted_data = self._enhance_with_context(
-                extracted_data,
-                schema_partition,
-                text_chunk,
-                context,
-                model
-            )
-        
         return extracted_data
     
-    def _attempt_fix(
-        self,
-        extraction: Dict,
-        schema: Dict,
-        error: str,
-        text: str,
-        model: str
-    ) -> Optional[Dict]:
-        """Attempt to fix validation errors in extraction"""
+    def _truncate_to_tokens(self, text: str, max_tokens: int, model: str) -> str:
+        """Truncate text to fit within token limit"""
+        import tiktoken
         
-        fix_prompt = f"""
-        The following JSON extraction has validation errors. Please fix them.
+        try:
+            if "claude" in model.lower():
+                enc = tiktoken.get_encoding("cl100k_base")
+            else:
+                enc = tiktoken.encoding_for_model("gpt-4")
+            
+            tokens = enc.encode(text)
+            if len(tokens) <= max_tokens:
+                return text
+            
+            # Truncate and decode
+            truncated_tokens = tokens[:max_tokens]
+            return enc.decode(truncated_tokens)
         
-        Schema:
-        {json.dumps(schema, indent=2)}
+        except Exception:
+            # Fallback to character-based truncation
+            estimated_chars = max_tokens * 4  # Rough estimate
+            return text[:estimated_chars]
+    
+    def _create_context_summary(self, text_chunk: str, schema: Dict, context: Dict) -> Dict:
+        """Create a summary of context using embeddings"""
+        summary = {
+            "has_full_document": "full_text" in context,
+            "has_embeddings": "text_embeddings" in context or "schema_embeddings" in context,
+            "chunk_type": "partial",
+            "schema_type": "partition" if "partition" in str(schema) else "full"
+        }
         
-        Current Extraction:
-        {json.dumps(extraction, indent=2)}
+        # Use embeddings to find relevant context if available
+        if "text_embeddings" in context and self.embedding_manager:
+            try:
+                # Get embedding for current chunk
+                chunk_embedding = self.embedding_manager.create_embeddings(text_chunk[:500])
+                
+                # Find similar content in full document (if available)
+                if "full_text" in context:
+                    full_text_sample = context["full_text"][:2000]
+                    full_embedding = self.embedding_manager.create_embeddings(full_text_sample)
+                    similarity = self.embedding_manager.calculate_similarity(chunk_embedding, full_embedding)
+                    summary["context_similarity"] = float(similarity)
+            except Exception as e:
+                log("session", "embedding_error", str(e), "WARNING")
         
-        Validation Error:
-        {error}
+        return summary
+    
+    def _reduce_prompt_size(self, prompt: str, schema: Dict, text: str, pass_num: int) -> str:
+        """Reduce prompt size to fit within token limits"""
+        # Simplified prompt with minimal examples
+        reduced_prompt = f"""Extract JSON from text (Pass {pass_num}).
+
+Schema:
+{json.dumps(schema, indent=2)[:1000]}...
+
+Text:
+{text[:1500]}...
+
+Rules:
+- Match schema structure exactly
+- Use null for missing required fields
+- Output only valid JSON
+
+JSON Output:"""
         
-        Original Text (for reference):
-        {text[:1000]}...
+        return reduced_prompt
+    
+    def _attempt_fix(self, extraction: Dict, schema: Dict, error: str, text_sample: str, model: str) -> Optional[Dict]:
+        """Attempt to fix validation errors with minimal token usage"""
         
-        Fix the extraction to match the schema exactly. 
-        - Ensure all required fields are present
-        - Ensure all field types match the schema
-        - Remove any fields not in the schema
-        - Use null for missing optional fields
+        # Parse error to identify specific issues
+        error_summary = self._summarize_error(error)
         
-        Return ONLY the fixed JSON object.
-        """
+        fix_prompt = f"""Fix this JSON to match the schema.
+
+Schema (key fields):
+{self._get_schema_summary(schema)}
+
+Current JSON:
+{json.dumps(extraction, indent=2)[:1000]}
+
+Error: {error_summary}
+
+Fixed JSON:"""
         
         try:
             response = call_llm(fix_prompt, model)
             fixed_extraction = extract_json(response)
             
-            # Validate the fix
+            # Quick validation
             is_valid, _ = validate_against_schema(schema, fixed_extraction)
             if is_valid:
                 return fixed_extraction
             else:
-                return extraction  # Return original if fix didn't work
+                return extraction
         
         except Exception as e:
-            print(f"Error attempting fix: {e}")
+            log("session", "fix_attempt_error", str(e), "WARNING")
             return extraction
     
-    def _enhance_with_context(
-        self,
-        extraction: Dict,
-        schema: Dict,
-        text_chunk: str,
-        context: Dict,
-        model: str
-    ) -> Dict:
-        """Enhance extraction with global context information"""
+    def _summarize_error(self, error: str) -> str:
+        """Extract key information from validation error"""
+        if "required" in error.lower():
+            match = re.search(r"'(\w+)'.*required", error)
+            if match:
+                return f"Missing required field: {match.group(1)}"
+        elif "type" in error.lower():
+            match = re.search(r"'(\w+)'.*type", error)
+            if match:
+                return f"Type mismatch for field: {match.group(1)}"
         
-        # Check if extraction has any null or empty fields that might be filled from context
-        empty_fields = self._find_empty_fields(extraction, schema)
-        
-        if not empty_fields:
-            return extraction
-        
-        enhance_prompt = f"""
-        Enhance the following extraction by filling in missing information from the context.
-        
-        Current Extraction:
-        {json.dumps(extraction, indent=2)}
-        
-        Empty/Missing Fields to Fill:
-        {json.dumps(empty_fields, indent=2)}
-        
-        Current Text Chunk:
-        {text_chunk[:500]}...
-        
-        Full Document Context Available: Yes
-        Full Schema Context Available: Yes
-        
-        Instructions:
-        1. Only fill in fields that are currently null or empty
-        2. Only use information that is clearly stated in the text
-        3. Maintain the same data types as specified in the schema
-        4. Do not modify already filled fields
-        5. If information is not available, keep the field as null
-        
-        Return the enhanced JSON object with filled fields where possible.
-        Return ONLY the JSON object.
-        """
-        
-        try:
-            response = call_llm(enhance_prompt, model)
-            enhanced = extract_json(response)
-            
-            # Validate enhancement
-            is_valid, _ = validate_against_schema(schema, enhanced)
-            if is_valid:
-                return enhanced
-            else:
-                return extraction  # Return original if enhancement failed
-        
-        except Exception as e:
-            print(f"Error enhancing extraction: {e}")
-            return extraction
+        return error[:100] if len(error) > 100 else error
     
-    def _find_empty_fields(self, data: Dict, schema: Dict, path: str = "") -> List[str]:
-        """Find empty or null fields in the extraction"""
-        empty_fields = []
-        
-        if 'properties' in schema:
-            for field_name, field_schema in schema['properties'].items():
-                field_path = f"{path}.{field_name}" if path else field_name
-                
-                if field_name in data:
-                    value = data[field_name]
-                    
-                    # Check if field is empty
-                    if value is None or value == "" or value == [] or value == {}:
-                        empty_fields.append(field_path)
-                    # Recursively check nested objects
-                    elif isinstance(value, dict) and 'properties' in field_schema:
-                        nested_empty = self._find_empty_fields(value, field_schema, field_path)
-                        empty_fields.extend(nested_empty)
-                else:
-                    # Field is missing entirely
-                    if 'required' not in schema or field_name not in schema.get('required', []):
-                        empty_fields.append(field_path)
-        
-        return empty_fields
+    def _get_schema_summary(self, schema: Dict) -> str:
+        """Get a concise summary of schema for token efficiency"""
+        summary = {
+            "type": schema.get("type", "object"),
+            "required": schema.get("required", [])[:5],  # First 5 required fields
+            "properties": list(schema.get("properties", {}).keys())[:10]  # First 10 properties
+        }
+        return json.dumps(summary, indent=2)
     
     def fix_validation_errors(
         self,
@@ -247,43 +266,194 @@ class ExtractionEngine:
         context: Dict,
         model: str
     ) -> Dict:
-        """Fix validation errors in final merged JSON"""
+        """Fix validation errors in final merged JSON with token efficiency"""
         
-        fix_prompt = f"""
-        Fix the validation errors in this JSON data to match the schema.
+        # Identify specific issues
+        issues = self._identify_validation_issues(json_data, schema, error)
         
-        Schema:
-        {json.dumps(schema, indent=2)[:3000]}...
-        
-        Current JSON with Errors:
-        {json.dumps(json_data, indent=2)[:3000]}...
-        
-        Validation Error:
-        {error}
-        
-        Context Information:
-        - This is a merged result from multiple extraction passes
-        - The original document had {context.get('chunk_count', 'multiple')} chunks
-        - The schema had {context.get('partition_count', 'multiple')} partitions
-        
-        Fix Instructions:
-        1. Address the specific validation error mentioned
-        2. Ensure all required fields are present
-        3. Ensure all data types match the schema
-        4. Remove any duplicate or conflicting data
-        5. Preserve as much valid extracted information as possible
-        
-        Return ONLY the complete, fixed JSON object.
-        """
-        
-        try:
-            response = call_llm(fix_prompt, model)
-            fixed_json = extract_json(response)
-            return fixed_json
-        
-        except Exception as e:
-            print(f"Error fixing validation errors: {e}")
+        if not issues:
             return json_data
+        
+        # Fix issues programmatically first
+        fixed_data = self._programmatic_fixes(json_data, schema, issues)
+        
+        # Validate the fixes
+        is_valid, remaining_error = validate_against_schema(schema, fixed_data)
+        
+        if is_valid:
+            return fixed_data
+        
+        # If still invalid, try targeted LLM fix on specific fields only
+        problem_fields = self._extract_problem_fields(remaining_error)
+        
+        if problem_fields:
+            fix_prompt = f"""Fix only these fields in the JSON:
+
+Problem fields: {problem_fields}
+Schema for these fields:
+{self._get_field_schemas(schema, problem_fields)}
+
+Current values:
+{self._get_field_values(fixed_data, problem_fields)}
+
+Return only the corrected field values as JSON:"""
+            
+            try:
+                response = call_llm(fix_prompt, model)
+                field_fixes = extract_json(response)
+                
+                # Apply field fixes
+                for field, value in field_fixes.items():
+                    if field in problem_fields:
+                        self._set_field_value(fixed_data, field, value)
+                
+                return fixed_data
+            
+            except Exception as e:
+                log("session", "field_fix_error", str(e), "WARNING")
+        
+        return fixed_data
+    
+    def _identify_validation_issues(self, data: Dict, schema: Dict, error: str) -> List[Dict]:
+        """Identify specific validation issues"""
+        issues = []
+        
+        # Check for missing required fields
+        required = schema.get("required", [])
+        for field in required:
+            if field not in data or data[field] is None:
+                issues.append({"type": "missing_required", "field": field})
+        
+        # Check for type mismatches
+        if "properties" in schema:
+            for field, field_schema in schema["properties"].items():
+                if field in data:
+                    expected_type = field_schema.get("type")
+                    if expected_type and not self._check_type(data[field], expected_type):
+                        issues.append({
+                            "type": "type_mismatch",
+                            "field": field,
+                            "expected": expected_type,
+                            "actual": type(data[field]).__name__
+                        })
+        
+        return issues
+    
+    def _programmatic_fixes(self, data: Dict, schema: Dict, issues: List[Dict]) -> Dict:
+        """Apply programmatic fixes for common issues"""
+        fixed = data.copy()
+        
+        for issue in issues:
+            if issue["type"] == "missing_required":
+                field = issue["field"]
+                if field in schema.get("properties", {}):
+                    field_schema = schema["properties"][field]
+                    # Set appropriate default value based on type
+                    field_type = field_schema.get("type", "string")
+                    if field_type == "string":
+                        fixed[field] = ""
+                    elif field_type == "number" or field_type == "integer":
+                        fixed[field] = 0
+                    elif field_type == "boolean":
+                        fixed[field] = False
+                    elif field_type == "array":
+                        fixed[field] = []
+                    elif field_type == "object":
+                        fixed[field] = {}
+                    else:
+                        fixed[field] = None
+            
+            elif issue["type"] == "type_mismatch":
+                field = issue["field"]
+                expected = issue["expected"]
+                # Try to convert type
+                try:
+                    if expected == "string":
+                        fixed[field] = str(data[field])
+                    elif expected == "number":
+                        fixed[field] = float(data[field])
+                    elif expected == "integer":
+                        fixed[field] = int(data[field])
+                    elif expected == "boolean":
+                        fixed[field] = bool(data[field])
+                    elif expected == "array":
+                        if not isinstance(data[field], list):
+                            fixed[field] = [data[field]] if data[field] else []
+                    elif expected == "object":
+                        if not isinstance(data[field], dict):
+                            fixed[field] = {}
+                except Exception:
+                    # If conversion fails, set to null
+                    fixed[field] = None
+        
+        return fixed
+    
+    def _check_type(self, value: Any, expected_type: str) -> bool:
+        """Check if value matches expected type"""
+        type_map = {
+            "string": str,
+            "number": (int, float),
+            "integer": int,
+            "boolean": bool,
+            "array": list,
+            "object": dict,
+            "null": type(None)
+        }
+        
+        expected = type_map.get(expected_type)
+        if expected:
+            return isinstance(value, expected)
+        
+        return True
+    
+    def _extract_problem_fields(self, error: str) -> List[str]:
+        """Extract field names from error message"""
+        fields = []
+        
+        # Look for field names in quotes
+        matches = re.findall(r"'([^']+)'", error)
+        for match in matches:
+            # Filter to likely field names
+            if len(match) < 50 and not match.startswith('/'):
+                fields.append(match)
+        
+        return fields[:5]  # Limit to 5 fields
+    
+    def _get_field_schemas(self, schema: Dict, fields: List[str]) -> Dict:
+        """Get schemas for specific fields"""
+        field_schemas = {}
+        properties = schema.get("properties", {})
+        
+        for field in fields:
+            if field in properties:
+                field_schemas[field] = properties[field]
+        
+        return field_schemas
+    
+    def _get_field_values(self, data: Dict, fields: List[str]) -> Dict:
+        """Get current values for specific fields"""
+        field_values = {}
+        
+        for field in fields:
+            if field in data:
+                field_values[field] = data[field]
+            else:
+                field_values[field] = None
+        
+        return field_values
+    
+    def _set_field_value(self, data: Dict, field_path: str, value: Any):
+        """Set a field value in nested structure"""
+        if '.' not in field_path:
+            data[field_path] = value
+        else:
+            parts = field_path.split('.')
+            current = data
+            for part in parts[:-1]:
+                if part not in current:
+                    current[part] = {}
+                current = current[part]
+            current[parts[-1]] = value
 
 # Initialize global instance
 extraction_engine = ExtractionEngine()

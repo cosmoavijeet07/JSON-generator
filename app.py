@@ -1,4 +1,3 @@
-from core import schema_analyze
 import streamlit as st
 import os
 import json
@@ -6,6 +5,7 @@ import time
 from datetime import datetime
 from dotenv import load_dotenv
 from core import (
+    schema_validator,
     prompt_engine,
     llm_interface,
     json_extractor,
@@ -13,10 +13,10 @@ from core import (
     session_manager,
     token_estimator,
     text_analyzer,
+    schema_analyzer,
     extraction_engine,
     merger_engine,
-    embedding_manager,
-    schema_analyzer
+    embedding_manager
 )
 
 load_dotenv()
@@ -166,7 +166,7 @@ if st.session_state.pipeline_choice:
             progress_bar.progress(10)
             
             # Validate schema
-            is_valid, error = schema_analyze.is_valid_schema(schema_json)
+            is_valid, error = schema_validator.is_valid_schema(schema_json)
             if not is_valid:
                 st.error(f"Schema validation failed: {error}")
                 st.stop()
@@ -301,7 +301,7 @@ if st.session_state.pipeline_choice:
             log_and_display("Analyzing JSON schema complexity...")
             
             # Validate schema
-            is_valid, error = schema_analyze.is_valid_schema(schema_json)
+            is_valid, error = schema_validator.is_valid_schema(schema_json)
             if not is_valid:
                 st.error(f"Schema validation failed: {error}")
                 st.stop()
@@ -365,6 +365,16 @@ if st.session_state.pipeline_choice:
             # Step 3: Multi-Pass Extraction
             st.subheader("🎯 Step 3: Multi-Pass Extraction")
             
+            # Check optimization status
+            single_chunk = len(st.session_state.text_chunks) == 1
+            single_partition = len(st.session_state.schema_partitions) == 1
+            is_optimized = single_chunk and single_partition
+            
+            if is_optimized:
+                st.info("🚀 **Optimized Mode**: Single chunk and partition detected - merge step will be skipped")
+            else:
+                st.info(f"📊 Processing {len(st.session_state.text_chunks)} chunks × {len(st.session_state.schema_partitions)} partitions = {len(st.session_state.text_chunks) * len(st.session_state.schema_partitions)} operations")
+            
             # Get number of passes
             num_passes = st.slider("Number of extraction passes:", 2, 5, 3)
             
@@ -377,8 +387,18 @@ if st.session_state.pipeline_choice:
                     'text_embeddings': st.session_state.text_embeddings,
                     'schema_embeddings': st.session_state.schema_embeddings,
                     'full_text': text_str,
-                    'full_schema': schema_json
+                    'full_schema': schema_json,
+                    'total_chunks': len(st.session_state.text_chunks),
+                    'total_partitions': len(st.session_state.schema_partitions)
                 }
+                
+                # Check if we can skip merging (single chunk and single partition)
+                single_chunk = len(st.session_state.text_chunks) == 1
+                single_partition = len(st.session_state.schema_partitions) == 1
+                skip_merging = single_chunk and single_partition
+                
+                if skip_merging:
+                    log_and_display("Single chunk and partition detected - optimizing pipeline", "INFO")
                 
                 # Extract for each chunk-partition combination
                 all_extractions = []
@@ -411,19 +431,27 @@ if st.session_state.pipeline_choice:
                 
                 progress_bar.progress(85)
                 
-                # Step 4: Intelligent Merging
-                st.subheader("🔄 Step 4: Intelligent Merging")
-                log_and_display("Merging extracted data...")
-                
-                # Merge all extractions
-                final_json = merger_engine.intelligent_merge(
-                    all_extractions, 
-                    schema_json, 
-                    context,
-                    selected_model
-                )
-                
-                progress_bar.progress(95)
+                # Skip merging if single chunk and partition
+                if skip_merging and all_extractions:
+                    log_and_display("Skipping merge operation - using direct extraction result")
+                    final_json = all_extractions[0]['data']
+                    
+                    # Ensure schema compliance even for single extraction
+                    final_json = merger_engine.enforce_schema_compliance(final_json, schema_json)
+                    progress_bar.progress(95)
+                else:
+                    # Step 4: Intelligent Merging (only if needed)
+                    st.subheader("🔄 Step 4: Intelligent Merging")
+                    log_and_display("Merging extracted data...")
+                    
+                    # Merge all extractions
+                    final_json = merger_engine.intelligent_merge(
+                        all_extractions, 
+                        schema_json, 
+                        context,
+                        selected_model
+                    )
+                    progress_bar.progress(95)
                 
                 # Final validation
                 log_and_display("Performing final validation...")
