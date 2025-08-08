@@ -268,6 +268,16 @@ Fixed JSON:"""
     ) -> Dict:
         """Fix validation errors in final merged JSON with token efficiency"""
         
+        # Ensure json_data is a dictionary
+        if not isinstance(json_data, dict):
+            # If json_data is not a dict, try to convert or create empty dict
+            if isinstance(json_data, list) and len(json_data) > 0 and isinstance(json_data[0], dict):
+                # If it's a list with dict items, take the first one
+                json_data = json_data[0]
+            else:
+                # Create empty dict based on schema
+                json_data = {}
+        
         # Identify specific issues
         issues = self._identify_validation_issues(json_data, schema, error)
         
@@ -318,6 +328,14 @@ Return only the corrected field values as JSON:"""
         """Identify specific validation issues"""
         issues = []
         
+        # Ensure data is a dictionary
+        if not isinstance(data, dict):
+            # If data is not a dict, all required fields are missing
+            required = schema.get("required", [])
+            for field in required:
+                issues.append({"type": "missing_required", "field": field})
+            return issues
+        
         # Check for missing required fields
         required = schema.get("required", [])
         for field in required:
@@ -341,7 +359,12 @@ Return only the corrected field values as JSON:"""
     
     def _programmatic_fixes(self, data: Dict, schema: Dict, issues: List[Dict]) -> Dict:
         """Apply programmatic fixes for common issues"""
-        fixed = data.copy()
+        # Ensure we're working with a dictionary
+        if not isinstance(data, dict):
+            # If data is not a dict, create a new dict based on schema
+            fixed = {}
+        else:
+            fixed = data.copy()
         
         for issue in issues:
             if issue["type"] == "missing_required":
@@ -352,7 +375,9 @@ Return only the corrected field values as JSON:"""
                     field_type = field_schema.get("type", "string")
                     if field_type == "string":
                         fixed[field] = ""
-                    elif field_type == "number" or field_type == "integer":
+                    elif field_type == "number":
+                        fixed[field] = 0.0
+                    elif field_type == "integer":
                         fixed[field] = 0
                     elif field_type == "boolean":
                         fixed[field] = False
@@ -366,25 +391,64 @@ Return only the corrected field values as JSON:"""
             elif issue["type"] == "type_mismatch":
                 field = issue["field"]
                 expected = issue["expected"]
+                
+                # Ensure fixed is a dict before trying to access/set fields
+                if not isinstance(fixed, dict):
+                    fixed = {}
+                
                 # Try to convert type
                 try:
-                    if expected == "string":
-                        fixed[field] = str(data[field])
-                    elif expected == "number":
-                        fixed[field] = float(data[field])
-                    elif expected == "integer":
-                        fixed[field] = int(data[field])
-                    elif expected == "boolean":
-                        fixed[field] = bool(data[field])
-                    elif expected == "array":
-                        if not isinstance(data[field], list):
-                            fixed[field] = [data[field]] if data[field] else []
-                    elif expected == "object":
-                        if not isinstance(data[field], dict):
+                    if field in data and isinstance(data, dict):
+                        if expected == "string":
+                            fixed[field] = str(data[field])
+                        elif expected == "number":
+                            fixed[field] = float(data[field])
+                        elif expected == "integer":
+                            fixed[field] = int(data[field])
+                        elif expected == "boolean":
+                            fixed[field] = bool(data[field])
+                        elif expected == "array":
+                            if not isinstance(data[field], list):
+                                fixed[field] = [data[field]] if data[field] else []
+                            else:
+                                fixed[field] = data[field]
+                        elif expected == "object":
+                            if not isinstance(data[field], dict):
+                                fixed[field] = {}
+                            else:
+                                fixed[field] = data[field]
+                    else:
+                        # If field doesn't exist or data is not dict, set default
+                        if expected == "string":
+                            fixed[field] = ""
+                        elif expected == "number":
+                            fixed[field] = 0.0
+                        elif expected == "integer":
+                            fixed[field] = 0
+                        elif expected == "boolean":
+                            fixed[field] = False
+                        elif expected == "array":
+                            fixed[field] = []
+                        elif expected == "object":
                             fixed[field] = {}
+                        else:
+                            fixed[field] = None
                 except Exception:
-                    # If conversion fails, set to null
-                    fixed[field] = None
+                    # If conversion fails, set to default value
+                    if expected == "string":
+                        fixed[field] = ""
+                    elif expected == "number":
+                        fixed[field] = 0.0
+                    elif expected == "integer":
+                        fixed[field] = 0
+                    elif expected == "boolean":
+                        fixed[field] = False
+                    elif expected == "array":
+                        fixed[field] = []
+                    elif expected == "object":
+                        fixed[field] = {}
+                    else:
+                        fixed[field] = None
         
         return fixed
     
