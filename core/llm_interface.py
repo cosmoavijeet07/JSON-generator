@@ -14,7 +14,7 @@ anthropic_api_key = os.getenv("ANTHROPIC_API_KEY")
 anthropic_client = anthropic.Anthropic(api_key=anthropic_api_key) if anthropic_api_key else None
 
 # Models that support temperature customization
-SUPPORTS_TEMPERATURE = {"gpt-4", "gpt-4o", "gpt-4.1-2025-04-14", "o4-mini-2025-04-16"}
+SUPPORTS_TEMPERATURE = {"gpt-4", "gpt-4o", "gpt-4.1-2025-04-14"}
 CLAUDE_MODELS = {"claude-sonnet-4-20250514"}
 
 def call_llm(prompt: str, model: str = "gpt-4.1-2025-04-14", temperature: float = None):

@@ -59,6 +59,15 @@ with col1:
         index=0,
         help="Select the LLM model for extraction"
     )
+    st.markdown(
+    f"""
+**Model Notes**  
+- 🧠 **GPT 4.1 (Default)**: Recommended for well-structured schemas with fewer fields  
+- ⚡ **GPT O4 Mini**: Best for very large text files, complex nesting schemas, and long output (up to 100k tokens)  
+- 🎨 **Claude Sonnet 4.0**: Excels in creative reasoning(Credits Not avilable currently) 
+- 🔍 **Chat GPT O3**: Optimized for step-by-step reasoning and detailed problem solving  
+"""
+)
     selected_model = model_map[selected_model_label]
 
 with col2:
