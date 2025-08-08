@@ -437,7 +437,7 @@ if st.session_state.pipeline_choice:
                     final_json = all_extractions[0]['data']
                     
                     # Ensure schema compliance even for single extraction
-                    final_json = merger_engine.enforce_schema_compliance(final_json, schema_json)
+                    # final_json = merger_engine.enforce_schema_compliance(final_json, schema_json)
                     progress_bar.progress(95)
                 else:
                     # Step 4: Intelligent Merging (only if needed)
