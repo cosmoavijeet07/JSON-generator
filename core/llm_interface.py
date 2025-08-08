@@ -41,7 +41,7 @@ def _call_openai(prompt: str, model: str, temperature: float = None):
     model_base = model.split(":")[-1] if ":" in model else model
     try:
         # Determine temperature
-        if temperature is not None:
+        if temperature is not None and model_base in SUPPORTS_TEMPERATURE:
             use_temp = temperature
             response = openai.chat.completions.create(
             model=model,
