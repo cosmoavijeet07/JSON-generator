@@ -7,7 +7,8 @@ from .prompt_engine import create_adaptive_prompt
 from .logger_service import log
 from .token_estimator import estimate_tokens
 from .embedding_manager import embedding_manager
-
+from app import log_and_display
+        
 class ExtractionEngine:
     """Handles multi-pass extraction with context awareness and token management"""
     
@@ -85,6 +86,7 @@ class ExtractionEngine:
             try:
                 # Call LLM for extraction
                 response = call_llm(prompt, model)
+                log_and_display(response)
                 
                 # Extract JSON from response
                 current_extraction = extract_json(response)

@@ -387,8 +387,6 @@ if st.session_state.pipeline_choice:
                 context = {
                     'text_embeddings': st.session_state.text_embeddings,
                     'schema_embeddings': st.session_state.schema_embeddings,
-                    'full_text': text_str,
-                    'full_schema': schema_json,
                     'total_chunks': len(st.session_state.text_chunks),
                     'total_partitions': len(st.session_state.schema_partitions)
                 }
