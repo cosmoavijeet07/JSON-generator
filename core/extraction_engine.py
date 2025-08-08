@@ -12,8 +12,8 @@ class ExtractionEngine:
     """Handles multi-pass extraction with context awareness and token management"""
     
     def __init__(self):
-        self.max_context_tokens = 8000  # Safe limit for most models
-        self.max_output_tokens = 2000   # Expected output size
+        self.max_context_tokens = 10000  # Safe limit for most models
+        self.max_output_tokens = 20000   # Expected output size
         self.embedding_manager = embedding_manager
     
     def multi_pass_extract(
@@ -111,7 +111,7 @@ class ExtractionEngine:
                         'pass': pass_num,
                         'data': current_extraction,
                         'valid': False,
-                        'error': error[:200]  # Limit error message size
+                        'error': error[:400]  # Limit error message size
                     })
                     
                     # Try to fix on last pass

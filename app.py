@@ -190,6 +190,7 @@ if st.session_state.pipeline_choice:
                 try:
                     output = llm_interface.call_llm(prompt, model=selected_model)
                     result = json_extractor.extract_json(output)
+                    log_and_display(result)
                     valid, error = json_extractor.validate_against_schema(schema_json, result)
                     
                     if valid:
@@ -435,6 +436,7 @@ if st.session_state.pipeline_choice:
                 if skip_merging and all_extractions:
                     log_and_display("Skipping merge operation - using direct extraction result")
                     final_json = all_extractions[0]['data']
+                    log_and_display(final_json)
                     
                     # Ensure schema compliance even for single extraction
                     # final_json = merger_engine.enforce_schema_compliance(final_json, schema_json)
@@ -451,6 +453,7 @@ if st.session_state.pipeline_choice:
                         context,
                         selected_model
                     )
+                    log_and_display(final_json)
                     progress_bar.progress(95)
                 
                 # Final validation
