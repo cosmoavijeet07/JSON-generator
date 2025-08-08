@@ -13,7 +13,7 @@ class ExtractionEngine:
     """Handles multi-pass extraction with context awareness and token management"""
     
     def __init__(self):
-        self.max_context_tokens = 10000  # Safe limit for most models
+        self.max_context_tokens = 100000  # Increased for better schema handling
         self.max_output_tokens = 20000   # Expected output size
         self.embedding_manager = embedding_manager
     
@@ -39,13 +39,35 @@ class ExtractionEngine:
             Extracted JSON matching the schema partition
         """
         
-        # Estimate tokens and adjust if needed
+        # CRITICAL FIX: Preserve full schema structure
+        # Don't truncate schema - it's essential for proper extraction
+        schema_str = json.dumps(schema_partition, indent=2)
+        schema_tokens = estimate_tokens(schema_str, model)
         text_tokens = estimate_tokens(text_chunk, model)
-        schema_tokens = estimate_tokens(json.dumps(schema_partition), model)
         
-        # Truncate text if needed to fit in context window
-        if text_tokens + schema_tokens > self.max_context_tokens - 1000:  # Leave room for prompt
-            max_text_tokens = self.max_context_tokens - schema_tokens - 1000
+        # Log token usage for debugging
+        log("session", "token_usage", 
+            f"Schema tokens: {schema_tokens}, Text tokens: {text_tokens}, Total: {schema_tokens + text_tokens}", 
+            "INFO")
+        
+        # Get model's token limit
+        from .token_estimator import get_model_limit
+        model_limit = get_model_limit(model)
+        
+        # Reserve space for prompt template and response
+        prompt_overhead = 2000
+        available_tokens = model_limit - prompt_overhead - self.max_output_tokens
+        
+        # CRITICAL: Ensure schema is never truncated
+        if schema_tokens > available_tokens // 2:
+            log("session", "schema_too_large", 
+                f"Schema requires {schema_tokens} tokens, which is too large. Consider partitioning.", 
+                "WARNING")
+            # For now, proceed but warn
+        
+        # Truncate text if needed, but NEVER truncate schema
+        max_text_tokens = available_tokens - schema_tokens
+        if text_tokens > max_text_tokens:
             text_chunk = self._truncate_to_tokens(text_chunk, max_text_tokens, model)
             log("session", "text_truncated", f"Text truncated to {max_text_tokens} tokens", "WARNING")
         
@@ -57,7 +79,6 @@ class ExtractionEngine:
         
         if is_single_extraction:
             log("session", "optimized_extraction", "Using optimized single extraction", "INFO")
-            # For single extraction, we can use fewer passes
             num_passes = min(num_passes, 2)
         
         extracted_data = None
@@ -67,29 +88,49 @@ class ExtractionEngine:
             # Use embeddings for context instead of full text
             context_summary = self._create_context_summary(text_chunk, schema_partition, context)
             
-            # Create adaptive prompt with token awareness
+            # Create adaptive prompt with FULL schema
             prompt = create_adaptive_prompt(
-                schema_partition,
+                schema_partition,  # Pass full schema dict, not truncated
                 text_chunk,
                 pass_number=pass_num,
-                previous_extractions=previous_extractions[-2:] if previous_extractions else None,  # Only last 2
+                previous_extractions=previous_extractions[-2:] if previous_extractions else None,
                 context=context_summary
             )
             
             # Check prompt tokens
             prompt_tokens = estimate_tokens(prompt, model)
-            if prompt_tokens > self.max_context_tokens:
+            log("session", f"pass_{pass_num}_tokens", f"Prompt tokens: {prompt_tokens}", "INFO")
+            
+            if prompt_tokens > model_limit - 1000:
                 log("session", "prompt_too_long", f"Prompt exceeds token limit: {prompt_tokens}", "WARNING")
-                # Reduce prompt size
-                prompt = self._reduce_prompt_size(prompt, schema_partition, text_chunk, pass_num)
+                # Reduce text size, not schema
+                text_chunk = text_chunk[:len(text_chunk)//2]
+                prompt = create_adaptive_prompt(
+                    schema_partition,
+                    text_chunk,
+                    pass_number=pass_num,
+                    previous_extractions=None,  # Skip previous attempts to save tokens
+                    context=context_summary
+                )
             
             try:
                 # Call LLM for extraction
+                log("session", f"llm_call_pass_{pass_num}", "Calling LLM for extraction", "INFO")
                 response = call_llm(prompt, model)
-                log_and_display(response)
+                
+                # Log response for debugging
+                log("session", f"llm_response_pass_{pass_num}", 
+                    f"Response length: {len(response)} chars", "INFO")
+                log_and_display(f"Pass {pass_num} response received")
                 
                 # Extract JSON from response
                 current_extraction = extract_json(response)
+                
+                # Log extracted JSON structure
+                if current_extraction:
+                    log("session", f"extraction_pass_{pass_num}", 
+                        f"Extracted keys: {list(current_extraction.keys()) if isinstance(current_extraction, dict) else 'Not a dict'}", 
+                        "INFO")
                 
                 # Validate against schema partition
                 is_valid, error = validate_against_schema(schema_partition, current_extraction)
@@ -102,6 +143,9 @@ class ExtractionEngine:
                         'valid': True
                     })
                     
+                    log("session", f"extraction_success_pass_{pass_num}", 
+                        "Valid extraction achieved", "SUCCESS")
+                    
                     # Early exit if we have good extraction
                     if is_single_extraction and is_valid:
                         log("session", "early_exit", f"Valid extraction achieved in pass {pass_num}", "INFO")
@@ -109,11 +153,14 @@ class ExtractionEngine:
                     elif pass_num >= 2 and is_valid:
                         break
                 else:
+                    log("session", f"validation_error_pass_{pass_num}", 
+                        f"Validation error: {error[:500]}", "WARNING")
+                    
                     previous_extractions.append({
                         'pass': pass_num,
                         'data': current_extraction,
                         'valid': False,
-                        'error': error[:400]  # Limit error message size
+                        'error': error[:400]
                     })
                     
                     # Try to fix on last pass
@@ -122,7 +169,7 @@ class ExtractionEngine:
                             current_extraction, 
                             schema_partition, 
                             error, 
-                            text_chunk[:1000],  # Use only sample for fix
+                            text_chunk[:1000],
                             model
                         )
             
@@ -186,18 +233,19 @@ class ExtractionEngine:
         return summary
     
     def _reduce_prompt_size(self, prompt: str, schema: Dict, text: str, pass_num: int) -> str:
-        """Reduce prompt size to fit within token limits"""
-        # Simplified prompt with minimal examples
+        """Reduce prompt size to fit within token limits - NEVER truncate schema"""
+        # Keep full schema, truncate text only
         reduced_prompt = f"""Extract JSON from text (Pass {pass_num}).
 
-Schema:
-{json.dumps(schema, indent=2)[:1000]}...
+Schema (COMPLETE - DO NOT MISS ANY FIELDS):
+{json.dumps(schema, indent=2)}
 
-Text:
-{text[:1500]}...
+Text (sample):
+{text[:1000]}...
 
 Rules:
-- Match schema structure exactly
+- Match schema structure EXACTLY
+- Include ALL required fields from the schema
 - Use null for missing required fields
 - Output only valid JSON
 
@@ -211,15 +259,22 @@ JSON Output:"""
         # Parse error to identify specific issues
         error_summary = self._summarize_error(error)
         
-        fix_prompt = f"""Fix this JSON to match the schema.
+        # CRITICAL: Include full schema structure for fixing
+        fix_prompt = f"""Fix this JSON to match the schema EXACTLY.
 
-Schema (key fields):
-{self._get_schema_summary(schema)}
+COMPLETE Schema:
+{json.dumps(schema, indent=2)}
 
-Current JSON:
-{json.dumps(extraction, indent=2)[:1000]}
+Current JSON (with errors):
+{json.dumps(extraction, indent=2)[:2000]}
 
 Error: {error_summary}
+
+Instructions:
+1. The schema above shows ALL required fields and structure
+2. Add any missing required fields with appropriate default values
+3. Fix type mismatches
+4. Ensure the output matches the schema structure EXACTLY
 
 Fixed JSON:"""
         
@@ -299,11 +354,12 @@ Fixed JSON:"""
         problem_fields = self._extract_problem_fields(remaining_error)
         
         if problem_fields:
+            # CRITICAL: Include full schema for context
             fix_prompt = f"""Fix only these fields in the JSON:
 
 Problem fields: {problem_fields}
-Schema for these fields:
-{self._get_field_schemas(schema, problem_fields)}
+Complete Schema:
+{json.dumps(schema, indent=2)}
 
 Current values:
 {self._get_field_values(fixed_data, problem_fields)}

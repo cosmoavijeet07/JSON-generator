@@ -105,7 +105,7 @@ def create_adaptive_prompt(
     Create an adaptive prompt for multi-pass extraction with context awareness
     
     Args:
-        schema: The JSON schema (partition) to extract
+        schema: The JSON schema (partition) to extract - FULL DICT, NOT STRING
         text: The text chunk to extract from
         pass_number: Current pass number (1-5)
         previous_extractions: Results from previous passes
@@ -138,8 +138,13 @@ def create_adaptive_prompt(
 Pass {prev['pass']}:
 Valid: {prev.get('valid', False)}
 {f"Error: {prev.get('error', '')}" if 'error' in prev else ""}
-{f"Data: {json.dumps(prev.get('data', {}), indent=2)[:500]}..." if 'data' in prev else ""}
 """
+            # Only show a sample of data to save tokens
+            if 'data' in prev and prev.get('data'):
+                data_str = json.dumps(prev.get('data', {}), indent=2)
+                if len(data_str) > 500:
+                    data_str = data_str[:500] + "..."
+                previous_section += f"Data: {data_str}\n"
         previous_section += "=== END PREVIOUS ATTEMPTS ===\n"
     
     # Context awareness section
@@ -154,6 +159,9 @@ Valid: {prev.get('valid', False)}
 === END CONTEXT ===
 """
     
+    # CRITICAL: Ensure full schema is included
+    schema_str = json.dumps(schema, indent=2)
+    
     prompt = f"""
 You are an advanced JSON extraction specialist performing pass {pass_number} of a multi-pass extraction.
 
@@ -161,26 +169,35 @@ CURRENT TASK: {instruction}
 
 {context_section}
 
-=== TARGET SCHEMA ===
-{json.dumps(schema, indent=2)}
+=== TARGET SCHEMA (COMPLETE - EXTRACT ALL FIELDS) ===
+{schema_str}
 === END SCHEMA ===
 
 === TEXT TO EXTRACT FROM ===
-{text[:3000]}{"..." if len(text) > 3000 else ""}
+{text}
 === END TEXT ===
 
 {previous_section}
 
-=== EXTRACTION GUIDELINES FOR PASS {pass_number} ===
+=== CRITICAL EXTRACTION RULES FOR PASS {pass_number} ===
 {"1. Focus on explicit information only." if pass_number == 1 else ""}
 {"2. Use context to resolve ambiguities from pass 1." if pass_number == 2 else ""}
 {"3. Make intelligent inferences based on document patterns." if pass_number == 3 else ""}
 {"4. Ensure all required fields have meaningful values." if pass_number == 4 else ""}
 {"5. Perfect the extraction with maximum accuracy." if pass_number == 5 else ""}
 
-- Match the schema structure exactly
-- Use null for genuinely missing required fields
-- Omit optional fields if no data available
+IMPORTANT REQUIREMENTS:
+- The schema above shows ALL fields that MUST be extracted
+- Match the COMPLETE schema structure exactly
+- Include ALL properties defined in the schema
+- For the 'required' fields: {schema.get('required', [])} - these MUST be present
+- Use appropriate default values for missing required fields:
+  * string → empty string ""
+  * number → 0
+  * boolean → false
+  * array → []
+  * object → {{}}
+- Omit optional fields ONLY if no data is available
 - Ensure type compliance (string, number, boolean, array, object)
 - NO hallucination - only extract what's supported by the text
 - For arrays, extract ALL relevant items, not just examples
@@ -189,14 +206,15 @@ CURRENT TASK: {instruction}
 {examples}
 === END EXAMPLES ===
 
-Now, extract a JSON object that perfectly matches the schema from the given text.
+Now, extract a JSON object that COMPLETELY matches the schema from the given text.
 This is pass {pass_number} - {instruction}
+
+The output MUST include ALL fields from the schema, especially the required ones.
 
 Return ONLY the JSON object, no explanations or markdown:
 """
     
     return prompt.strip()
-
 
 def _generate_adaptive_examples(schema: Dict) -> str:
     """Generate relevant few-shot examples based on schema structure"""
