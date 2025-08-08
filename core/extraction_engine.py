@@ -13,8 +13,8 @@ class ExtractionEngine:
     """Handles multi-pass extraction with context awareness and token management"""
     
     def __init__(self):
-        self.max_context_tokens = 100000  # Increased for better schema handling
-        self.max_output_tokens = 20000   # Expected output size
+        self.max_context_tokens = 200000  # Increased for better schema handling
+        self.max_output_tokens = 100000   # Expected output size
         self.embedding_manager = embedding_manager
     
     def multi_pass_extract(
@@ -66,7 +66,7 @@ class ExtractionEngine:
             # For now, proceed but warn
         
         # Truncate text if needed, but NEVER truncate schema
-        max_text_tokens = available_tokens - schema_tokens
+        max_text_tokens = available_tokens - schema_tokens + 10000
         if text_tokens > max_text_tokens:
             text_chunk = self._truncate_to_tokens(text_chunk, max_text_tokens, model)
             log("session", "text_truncated", f"Text truncated to {max_text_tokens} tokens", "WARNING")
@@ -219,11 +219,11 @@ class ExtractionEngine:
         if "text_embeddings" in context and self.embedding_manager:
             try:
                 # Get embedding for current chunk
-                chunk_embedding = self.embedding_manager.create_embeddings(text_chunk[:500])
+                chunk_embedding = self.embedding_manager.create_embeddings(text_chunk)
                 
                 # Find similar content in full document (if available)
                 if "full_text" in context:
-                    full_text_sample = context["full_text"][:2000]
+                    full_text_sample = context["full_text"]
                     full_embedding = self.embedding_manager.create_embeddings(full_text_sample)
                     similarity = self.embedding_manager.calculate_similarity(chunk_embedding, full_embedding)
                     summary["context_similarity"] = float(similarity)
@@ -241,7 +241,7 @@ Schema (COMPLETE - DO NOT MISS ANY FIELDS):
 {json.dumps(schema, indent=2)}
 
 Text (sample):
-{text[:1000]}...
+{text}...
 
 Rules:
 - Match schema structure EXACTLY

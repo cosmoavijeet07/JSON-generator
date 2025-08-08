@@ -14,7 +14,7 @@ anthropic_api_key = os.getenv("ANTHROPIC_API_KEY")
 anthropic_client = anthropic.Anthropic(api_key=anthropic_api_key) if anthropic_api_key else None
 
 # Models that support temperature customization
-SUPPORTS_TEMPERATURE = {"gpt-4", "gpt-4o", "gpt-4.1-2025-04-14", "o4-mini-2025-04-16", "o3-2025-04-16"}
+SUPPORTS_TEMPERATURE = {"gpt-4", "gpt-4o", "gpt-4.1-2025-04-14", "o4-mini-2025-04-16"}
 CLAUDE_MODELS = {"claude-sonnet-4-20250514"}
 
 def call_llm(prompt: str, model: str = "gpt-4.1-2025-04-14", temperature: float = None):
@@ -39,23 +39,36 @@ def _call_openai(prompt: str, model: str, temperature: float = None):
     """Call OpenAI models"""
     
     model_base = model.split(":")[-1] if ":" in model else model
-    
-    # Determine temperature
-    if temperature is not None:
-        use_temp = temperature
-    elif model_base in SUPPORTS_TEMPERATURE:
-        use_temp = 0.1
-    else:
-        use_temp = 1.0
-    
     try:
-        response = openai.chat.completions.create(
+        # Determine temperature
+        if temperature is not None:
+            use_temp = temperature
+            response = openai.chat.completions.create(
             model=model,
             messages=[{"role": "user", "content": prompt}],
             temperature=use_temp,
             max_tokens=4096  # Increased for larger outputs
         )
-        return response.choices[0].message.content
+            return response.choices[0].message.content
+        elif model_base in SUPPORTS_TEMPERATURE:
+            use_temp = 0.1
+            response = openai.chat.completions.create(
+            model=model,
+            messages=[{"role": "user", "content": prompt}],
+            temperature=use_temp,
+            max_tokens=4096  # Increased for larger outputs
+        )
+            return response.choices[0].message.content
+        else:
+            use_temp = 1.0
+            response = openai.chat.completions.create(
+            model=model,
+            messages=[{"role": "user", "content": prompt}],
+        )
+            return response.choices[0].message.content
+    
+    
+        
     
     except Exception as e:
         print(f"Error calling OpenAI API: {e}")

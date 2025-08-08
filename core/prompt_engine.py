@@ -142,8 +142,8 @@ Valid: {prev.get('valid', False)}
             # Only show a sample of data to save tokens
             if 'data' in prev and prev.get('data'):
                 data_str = json.dumps(prev.get('data', {}), indent=2)
-                if len(data_str) > 500:
-                    data_str = data_str[:500] + "..."
+                if len(data_str) > 10000:
+                    data_str = data_str[:10000] + "..."
                 previous_section += f"Data: {data_str}\n"
         previous_section += "=== END PREVIOUS ATTEMPTS ===\n"
     
