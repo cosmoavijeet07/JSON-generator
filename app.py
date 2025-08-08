@@ -4,8 +4,8 @@ import json
 import time
 from datetime import datetime
 from dotenv import load_dotenv
+from core import schema_analyze
 from core import (
-    schema_validator,
     prompt_engine,
     llm_interface,
     json_extractor,
@@ -166,7 +166,7 @@ if st.session_state.pipeline_choice:
             progress_bar.progress(10)
             
             # Validate schema
-            is_valid, error = schema_validator.is_valid_schema(schema_json)
+            is_valid, error = schema_analyze.is_valid_schema(schema_json)
             if not is_valid:
                 st.error(f"Schema validation failed: {error}")
                 st.stop()
@@ -301,7 +301,7 @@ if st.session_state.pipeline_choice:
             log_and_display("Analyzing JSON schema complexity...")
             
             # Validate schema
-            is_valid, error = schema_validator.is_valid_schema(schema_json)
+            is_valid, error = schema_analyze.is_valid_schema(schema_json)
             if not is_valid:
                 st.error(f"Schema validation failed: {error}")
                 st.stop()
