@@ -8,6 +8,9 @@ wenv/
 # Ignore logs
 logs/
 
+#Ignore Outputs
+outputs/
+
 # Ignore compiled Python files
 *.pyc
 __pycache__/
