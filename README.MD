@@ -138,8 +138,8 @@ JSON-EXTRACTOR-V2/
 
 ```bash
 # Clone repository
-git clone https://github.com/[your-repo]/json-extractor-v2.git
-cd json-extractor-v2
+git clone --single-branch --branch V3 https://github.com/cosmoavijeet07/JSON-generator.git
+cd JSON-generator
 
 # Install dependencies
 pip install -r requirements.txt
