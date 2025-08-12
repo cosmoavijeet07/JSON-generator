@@ -1,12 +1,12 @@
 # 🧠 Advanced Structured JSON Extractor v2.0: Unstructured Text → Structured JSON
 
-> Enterprise-grade document processing system that converts complex unstructured documents into valid structured JSON using state-of-the-art LLMs with intelligent chunking, schema partitioning, and multi-pass extraction.
+> Enterprise-grade document processing prototype system that converts complex unstructured documents into valid structured JSON using state-of-the-art LLMs with intelligent chunking, schema partitioning, and multi-pass extraction.
 
 ---
 
 ## 🔗 App Access
 
-**Streamlit App**: [https://json-extract-gen.streamlit.app/](https://json-extract-gen.streamlit.app/)
+**Streamlit App**: [https://json-extractor-v3.streamlit.app/](https://json-extractor-v3.streamlit.app/)
 
 ---
 
@@ -16,11 +16,7 @@
 1. Visit the app link above.
 2. Upload a valid JSON schema.
 3. Upload a text file (`.txt` or `.pdf`) with unstructured content.
-4. Choose your model from the dropdown:
-   - 🧠 **GPT 4.1** (128K context) — Balanced performance & cost
-   - 🚀 **O4 Mini** (128K context) — Cost-effective for large documents
-   - 🎯 **Claude Sonnet 4.0** (200K context) — Best for complex schemas
-   - 💬 **Chat GPT O3** (128K context) — Advanced reasoning
+4. Choose your model from the dropdown.
 5. Review file analysis (tokens, nesting level, complexity score).
 6. Select **Simple Pipeline** for documents < 10K tokens.
 7. View extracted JSON with validation status.
@@ -209,12 +205,6 @@ streamlit run app.py
 
 ---
 
-## 📚 Documentation
-
-🧾 View detailed documentation [click here](https://docs.google.com/document/d/e/2PACX-1vR-vEbZA1sojVCf9MwVLlU0KaYF_In8wGCkgnSmUXlcDM7GSDSKnjx_3lQi99mMnx8RTdrg8O6LKEW3/pub).
-
----
-
 ## 🚀 What's New in v2.0
 
 - ✨ **Extensive Pipeline**: Advanced processing for complex documents
@@ -231,6 +221,4 @@ streamlit run app.py
 ## 👤 Author & Support
 
 Developed by **Avijeet Palit**  
-📫 Contact: [avijeet.palit07@gmail.com]  
-🐛 Issues: [GitHub Issues](https://github.com/[your-repo]/issues)  
-💬 Discussions: [GitHub Discussions](https://github.com/[your-repo]/discussions)
+📫 Contact: [avijeet.palit07@gmail.com]   
